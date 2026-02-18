@@ -375,12 +375,14 @@ def render_customer_lookup():
                 
                 # AI Suggestions
                 st.markdown("---")
-                st.markdown("### 🤖 AI-Powered Suggestions")
+                st.markdown("### 🤖 AI-Powered Recommendations")
                 
-                with st.spinner("Generating personalized recommendations..."):
+                with st.spinner("🔮 Analyzing customer profile and generating personalized recommendations..."):
                     # Build context for LLM
                     context = f"""
-Analyze this customer and provide package recommendations:
+Analyze this customer and provide a structured package recommendation with these sections:
+
+Customer Profile:
 - Voice: {comm['voice_total_calls']:.0f} calls, {comm['voice_total_duration_mins']:.1f} mins
 - Peak time: {max(time_dist, key=time_dist.get)}
 - Data: {internet['total_mb']:.0f} MB (Download: {internet['download_pct']:.0f}%, Upload: {internet['upload_pct']:.0f}%)
@@ -388,15 +390,135 @@ Analyze this customer and provide package recommendations:
 - International: {'Yes' if intl['is_international_user'] else 'No'}
 {f"- Countries: {intl['all_countries']}" if intl['is_international_user'] else ''}
 
-What package would you recommend?
+Provide response in this format:
+1. USAGE PROFILE (2-3 sentences analyzing their usage patterns)
+2. RECOMMENDED PACKAGE (specific package details with data/voice/SMS amounts)
+3. KEY BENEFITS (3-4 bullet points why this package fits)
+4. PRICING STRATEGY (upsell/retention suggestion)
 """
                     response = query_ai(context)
-                    st.markdown(f"""
-                    <div class="insight-card">
-                        <h4>💡 Recommendation</h4>
-                        <p>{response['answer']}</p>
+                    
+                    # Beautiful formatted output
+                    st.markdown("""
+                    <style>
+                    .recommendation-header {
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 20px;
+                        border-radius: 10px 10px 0 0;
+                        text-align: center;
+                        font-size: 24px;
+                        font-weight: bold;
+                        margin-bottom: 0;
+                    }
+                    .recommendation-body {
+                        background: #f8f9fa;
+                        padding: 25px;
+                        border-radius: 0 0 10px 10px;
+                        border: 2px solid #667eea;
+                        line-height: 1.8;
+                    }
+                    .usage-badge {
+                        display: inline-block;
+                        background: #e3f2fd;
+                        color: #1976d2;
+                        padding: 5px 12px;
+                        border-radius: 20px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        margin: 5px 5px 5px 0;
+                    }
+                    .package-highlight {
+                        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                        color: white;
+                        padding: 20px;
+                        border-radius: 10px;
+                        font-size: 18px;
+                        font-weight: bold;
+                        text-align: center;
+                        margin: 15px 0;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    }
+                    </style>
+                    <div class="recommendation-header">
+                        💡 Personalized Package Recommendation
                     </div>
                     """, unsafe_allow_html=True)
+                    
+                    # Display formatted recommendation
+                    with st.container():
+                        st.markdown('<div class="recommendation-body">', unsafe_allow_html=True)
+                        
+                        # Usage summary badges
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            usage_level = "High" if comm['voice_total_calls'] > 500 else "Moderate" if comm['voice_total_calls'] > 200 else "Low"
+                            st.markdown(f'<div class="usage-badge">📞 Voice: {usage_level}</div>', unsafe_allow_html=True)
+                        with col2:
+                            data_level = "High" if internet['total_mb'] > 1000 else "Moderate" if internet['total_mb'] > 500 else "Low"
+                            st.markdown(f'<div class="usage-badge">📊 Data: {data_level}</div>', unsafe_allow_html=True)
+                        with col3:
+                            sms_level = "High" if sms['total_messages'] > 200 else "Moderate" if sms['total_messages'] > 50 else "Low"
+                            st.markdown(f'<div class="usage-badge">💬 SMS: {sms_level}</div>', unsafe_allow_html=True)
+                        with col4:
+                            if intl['is_international_user']:
+                                st.markdown(f'<div class="usage-badge">🌍 International</div>', unsafe_allow_html=True)
+                            else:
+                                st.markdown(f'<div class="usage-badge">🏠 Domestic Only</div>', unsafe_allow_html=True)
+                        
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        
+                        # AI Response with better formatting
+                        ai_text = response['answer']
+                        
+                        # Try to parse sections (if AI follows format)
+                        sections = {
+                            'profile': '',
+                            'package': '',
+                            'benefits': '',
+                            'pricing': ''
+                        }
+                        
+                        # Simple parsing (fallback to full text if not structured)
+                        if any(keyword in ai_text.lower() for keyword in ['usage profile', 'recommended package', 'benefits', 'pricing']):
+                            # Structured response
+                            lines = ai_text.split('\n')
+                            current_section = None
+                            for line in lines:
+                                line_lower = line.lower()
+                                if 'usage profile' in line_lower or 'profile' in line_lower and len(line) < 50:
+                                    current_section = 'profile'
+                                elif 'recommended package' in line_lower or 'package' in line_lower and len(line) < 50:
+                                    current_section = 'package'
+                                elif 'benefit' in line_lower and len(line) < 50:
+                                    current_section = 'benefits'
+                                elif 'pricing' in line_lower and len(line) < 50:
+                                    current_section = 'pricing'
+                                elif current_section and line.strip():
+                                    sections[current_section] += line + '\n'
+                            
+                            # Display structured
+                            if sections['profile']:
+                                st.markdown("**📋 Usage Profile Analysis**")
+                                st.info(sections['profile'].strip())
+                            
+                            if sections['package']:
+                                st.markdown("**🎁 Recommended Package**")
+                                st.markdown(f'<div class="package-highlight">{sections["package"].strip()}</div>', unsafe_allow_html=True)
+                            
+                            if sections['benefits']:
+                                st.markdown("**✨ Key Benefits**")
+                                st.success(sections['benefits'].strip())
+                            
+                            if sections['pricing']:
+                                st.markdown("**💰 Pricing Strategy**")
+                                st.warning(sections['pricing'].strip())
+                        else:
+                            # Fallback: display full text nicely
+                            st.markdown("**📋 Analysis & Recommendation**")
+                            st.markdown(ai_text)
+                        
+                        st.markdown('</div>', unsafe_allow_html=True)
             
             else:
                 st.error(f"❌ Customer {customer_id} not found")

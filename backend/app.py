@@ -648,34 +648,47 @@ def query_with_llm(request: QueryRequest):
         return 0
     
     context = f"""
-You are analyzing telecom customer data. Here are the key statistics:
+You are a telecom analytics AI assistant analyzing customer data. Provide clear, actionable insights.
 
-Total Customers: {len(df):,}
-International Users: {int(safe_col_count('intl_total_calls', 0)):,}
+CUSTOMER DATABASE STATISTICS:
 
-Voice Communication:
+📊 Overview:
+- Total Customers: {len(df):,}
+- International Users: {int(safe_col_count('intl_total_calls', 0)):,} ({safe_col_count('intl_total_calls', 0)/len(df)*100:.1f}%)
+
+📞 Voice Communication:
 - Total Calls: {safe_col_sum('voice_total_calls'):,.0f}
 - Total Duration: {safe_col_sum('voice_total_duration_mins'):,.0f} mins
-- Average per User: {safe_col_mean('voice_total_calls'):.1f} calls
+- Average per User: {safe_col_mean('voice_total_calls'):.1f} calls, {safe_col_mean('voice_total_duration_mins'):.1f} mins
 
-{'Time Distribution:' if 'voice_morning_calls' in df.columns else ''}
-{f"- Morning Calls: {safe_col_sum('voice_morning_calls'):,.0f}" if 'voice_morning_calls' in df.columns else ''}
-{f"- Evening Calls: {safe_col_sum('voice_evening_calls'):,.0f}" if 'voice_evening_calls' in df.columns else ''}
-{f"- Night Calls: {safe_col_sum('voice_night_calls'):,.0f}" if 'voice_night_calls' in df.columns else ''}
+{'📅 Time Distribution:' if 'voice_morning_calls' in df.columns else ''}
+{f"- Morning (6am-12pm): {safe_col_sum('voice_morning_calls'):,.0f} calls" if 'voice_morning_calls' in df.columns else ''}
+{f"- Evening (12pm-6pm): {safe_col_sum('voice_evening_calls'):,.0f} calls" if 'voice_evening_calls' in df.columns else ''}
+{f"- Night (6pm-6am): {safe_col_sum('voice_night_calls'):,.0f} calls" if 'voice_night_calls' in df.columns else ''}
 
-{'SMS:' if 'sms_total_messages' in df.columns else ''}
+{'💬 SMS:' if 'sms_total_messages' in df.columns else ''}
 {f"- Total Messages: {safe_col_sum('sms_total_messages'):,.0f}" if 'sms_total_messages' in df.columns else ''}
-{f"- Average per User: {safe_col_mean('sms_total_messages'):.1f}" if 'sms_total_messages' in df.columns else ''}
+{f"- Average per User: {safe_col_mean('sms_total_messages'):.1f} messages" if 'sms_total_messages' in df.columns else ''}
 
-Data Usage:
-- Total Data (MB): {safe_col_sum('data_total_mb'):,.0f}
-- Average per User (MB): {safe_col_mean('data_total_mb'):.1f}
-{f"- Total Download (GB): {safe_col_sum('data_downlink_mb') / 1024:.1f}" if 'data_downlink_mb' in df.columns else ''}
-{f"- Total Upload (GB): {safe_col_sum('data_uplink_mb') / 1024:.1f}" if 'data_uplink_mb' in df.columns else ''}
+📊 Data Usage:
+- Total Data: {safe_col_sum('data_total_mb'):,.0f} MB ({safe_col_sum('data_total_mb')/1024:.1f} GB)
+- Average per User: {safe_col_mean('data_total_mb'):.1f} MB
+{f"- Total Download: {safe_col_sum('data_downlink_mb') / 1024:.1f} GB" if 'data_downlink_mb' in df.columns else ''}
+{f"- Total Upload: {safe_col_sum('data_uplink_mb') / 1024:.1f} GB" if 'data_uplink_mb' in df.columns else ''}
 
-User Question: {request.question}
+---
 
-Provide a clear, concise answer based on the statistics above.
+USER QUESTION: {request.question}
+
+INSTRUCTIONS: 
+- If asked for package recommendations, provide structured response with:
+  1. USAGE PROFILE (analyze their patterns)
+  2. RECOMMENDED PACKAGE (specific details)
+  3. KEY BENEFITS (3-4 points)
+  4. PRICING STRATEGY (upsell/retention approach)
+- Use data-driven insights from statistics above
+- Be specific with numbers and percentages
+- Keep response concise but actionable
 """
     
     try:
