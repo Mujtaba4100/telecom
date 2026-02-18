@@ -17,6 +17,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import json
+import io
+from datetime import datetime
 
 # ============================================
 # CONFIGURATION
@@ -129,11 +131,15 @@ def get_customer(customer_id):
 
 def query_ai(question):
     try:
-        response = requests.post(f"{BACKEND_URL}/api/query", json={"question": question}, timeout=30)
+        response = requests.post(f"{BACKEND_URL}/api/query", json={"question": question}, timeout=60)
         response.raise_for_status()
         return response.json()
+    except requests.exceptions.Timeout:
+        return {"error": "AI service is taking longer than expected. Please try again."}
+    except requests.exceptions.ConnectionError:
+        return {"error": "Cannot connect to AI service. Please check backend connection."}
     except Exception as e:
-        return {"answer": f"Error: {e}"}
+        return {"error": "AI service temporarily unavailable. Please try again later."}
 
 def get_visualization(viz_type):
     try:
@@ -158,6 +164,77 @@ def run_clustering(n_clusters, algorithm):
 # ============================================
 # UI COMPONENTS
 # ============================================
+
+# Export/Download Functions
+def export_to_csv(data, filename="export.csv"):
+    """Convert data to CSV for download"""
+    if isinstance(data, dict):
+        df = pd.DataFrame([data])
+    elif isinstance(data, list):
+        df = pd.DataFrame(data)
+    else:
+        df = data
+    return df.to_csv(index=False).encode('utf-8')
+
+def export_chart_to_image(fig):
+    """Convert Plotly figure to PNG bytes"""
+    return fig.to_image(format="png", width=1200, height=600)
+
+def create_export_buttons(data=None, chart=None, prefix="report"):
+    """Create standardized export buttons"""
+    col1, col2, col3 = st.columns([1, 1, 4])
+    
+    with col1:
+        if data is not None:
+            csv_data = export_to_csv(data)
+            st.download_button(
+                label="📥 Export CSV",
+                data=csv_data,
+                file_name=f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+    
+    with col2:
+        if chart is not None:
+            try:
+                img_bytes = export_chart_to_image(chart)
+                st.download_button(
+                    label="📊 Save Chart",
+                    data=img_bytes,
+                    file_name=f"{prefix}_chart_{datetime.now().strftime('%Y%m%d_%H%M')}.png",
+                    mime="image/png",
+                    use_container_width=True
+                )
+            except:
+                 st.caption("Chart export requires kaleido")
+
+# AI Insights Panel
+def show_ai_insights(context, view_name="current view"):
+    """Display AI-generated insights for current view"""
+    with st.expander("💡 AI Insights & Recommendations", expanded=False):
+        with st.spinner("🔮 Analyzing data..."):
+            prompt = f"""Based on the {view_name} data, provide exactly 3 actionable insights in this format:
+
+1. [Insight title]: [Brief description]
+   Action: [What to do]
+
+2. [Insight title]: [Brief description]
+   Action: [What to do]
+
+3. [Insight title]: [Brief description]  
+   Action: [What to do]
+
+Context: {context}
+"""
+            response = query_ai(prompt)
+            if response and 'answer' in response:
+                st.markdown("**🎯 Top 3 Actionable Insights:**")
+                st.info(response['answer'])
+            elif response and 'error' in response:
+                st.warning(f"⚠️ {response['error']}")
+            else:
+                st.warning("⚠️ AI insights temporarily unavailable")
 
 def render_header():
     st.markdown('<div class="main-header">📊 Telecom Customer Analytics</div>', unsafe_allow_html=True)
@@ -618,11 +695,163 @@ def render_ai_chat():
             st.info(f"**AI:** {chat['answer']}")
             st.markdown("---")
 
+def render_cohort_comparison():
+    """Side-by-side cohort/cluster comparison with delta highlights"""
+    st.subheader("🔄 Cohort Comparison")
+    st.markdown("Compare two customer segments side-by-side")
+    
+    clusters_data = get_clusters("kmeans")
+    if not clusters_data or 'clusters' not in clusters_data:
+        st.error("Unable to load cluster data")
+        return
+    
+    df_clusters = pd.DataFrame(clusters_data['clusters'])
+    cluster_options = df_clusters['cluster_id'].tolist()
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        cohort_a = st.selectbox("Select Cohort A", cluster_options, index=0, key="cohort_a")
+    with col2:
+        cohort_b = st.selectbox("Select Cohort B", cluster_options, index=min(1, len(cluster_options)-1), key="cohort_b")
+    
+    # Get cohort data
+    cluster_a = df_clusters[df_clusters['cluster_id'] == cohort_a].iloc[0]
+    cluster_b = df_clusters[df_clusters['cluster_id'] == cohort_b].iloc[0]
+    
+    # Comparison header
+    st.markdown("---")
+    col1, col2, col3 = st.columns([2, 1, 2])
+    with col1:
+        st.markdown(f"### 📊 Cluster {cohort_a}")
+        st.caption(f"**{cluster_a['size']:,} customers**")
+    with col2:
+        st.markdown("### VS")
+    with col3:
+        st.markdown(f"### 📊 Cluster {cohort_b}")
+        st.caption(f"**{cluster_b['size']:,} customers**")
+    
+    st.markdown("---")
+    
+    # Define metrics to compare
+    metrics = [
+        ('avg_voice_mins', 'Voice Usage', 'mins'),
+        ('avg_data_mb', 'Data Usage', 'MB'),
+        ('avg_sms', 'SMS Count', 'messages')
+    ]
+    
+    comparison_data = []
+    
+    for metric_key, metric_name, unit in metrics:
+        val_a = cluster_a.get(metric_key, 0)
+        val_b = cluster_b.get(metric_key, 0)
+        
+        # Calculate percentage difference
+        if val_a > 0:
+            delta_pct = ((val_b - val_a) / val_a) * 100
+        else:
+            delta_pct = 0
+        
+        comparison_data.append({
+            'Metric': metric_name,
+            f'Cluster {cohort_a}': f"{val_a:.1f} {unit}",
+            f'Cluster {cohort_b}': f"{val_b:.1f} {unit}",
+            'Difference': f"{delta_pct:+.1f}%"
+        })
+        
+        # Visual comparison
+        col1, col2, col3 = st.columns([2, 2, 1])
+        
+        with col1:
+            st.metric(
+                label=f"{metric_name}",
+                value=f"{val_a:.1f} {unit}",
+                delta=None
+            )
+        
+        with col2:
+            delta_color = "normal" if delta_pct >= 0 else "inverse"
+            st.metric(
+                label=f"{metric_name}",
+                value=f"{val_b:.1f} {unit}",
+                delta=f"{delta_pct:+.1f}%",
+                delta_color=delta_color
+            )
+        
+        with col3:
+            if abs(delta_pct) > 50:
+                st.markdown(f"**⚠️ {abs(delta_pct):.0f}%**")
+            elif abs(delta_pct) > 20:
+                st.markdown(f"**⚡ {abs(delta_pct):.0f}%**")
+            else:
+                st.markdown(f"✓ {abs(delta_pct):.0f}%")
+    
+    st.markdown("---")
+    
+    # Summary table
+    st.markdown("### 📋 Comparison Summary")
+    df_comparison = pd.DataFrame(comparison_data)
+    st.dataframe(df_comparison, use_container_width=True, hide_index=True)
+    
+    # Export button
+    create_export_buttons(data=df_comparison, prefix="cohort_comparison")
+    
+    # Visual comparison chart
+    st.markdown("---")
+    st.markdown("### 📊 Visual Comparison")
+    
+    fig = go.Figure()
+    
+    metrics_names = [m[1] for m in metrics]
+    values_a = [cluster_a.get(m[0], 0) for m in metrics]
+    values_b = [cluster_b.get(m[0], 0) for m in metrics]
+    
+    fig.add_trace(go.Bar(
+        name=f'Cluster {cohort_a}',
+        x=metrics_names,
+        y=values_a,
+        marker_color='#667eea'
+    ))
+    
+    fig.add_trace(go.Bar(
+        name=f'Cluster {cohort_b}',
+        x=metrics_names,
+        y=values_b,
+        marker_color='#f093fb'
+    ))
+    
+    fig.update_layout(
+        barmode='group',
+        title=f"Cluster {cohort_a} vs Cluster {cohort_b}",
+        xaxis_title="Metric",
+        yaxis_title="Value",
+        height=400
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    create_export_buttons(chart=fig, prefix="cohort_comparison_chart")
+    
+    # AI Insights for comparison
+    context = f"""
+Comparing Cluster {cohort_a} ({cluster_a['size']:,} customers) vs Cluster {cohort_b} ({cluster_b['size']:,} customers):
+- Voice: {cluster_a.get('avg_voice_mins', 0):.1f} vs {cluster_b.get('avg_voice_mins', 0):.1f} mins
+- Data: {cluster_a.get('avg_data_mb', 0):.1f} vs {cluster_b.get('avg_data_mb', 0):.1f} MB
+- SMS: {cluster_a.get('avg_sms', 0):.1f} vs {cluster_b.get('avg_sms', 0):.1f} messages
+"""
+    show_ai_insights(context, "cohort comparison")
+
 # ============================================
 # MAIN APP
 # ============================================
 
 def main():
+    # Initialize session state for filters
+    if 'filters' not in st.session_state:
+        st.session_state.filters = {
+            'clusters': [],
+            'usage_level': 'All',
+            'international': 'All'
+        }
+    
     # Sidebar
     with st.sidebar:
         st.image("https://img.icons8.com/color/96/000000/phone.png", width=80)
@@ -633,6 +862,7 @@ def main():
             [
                 "🏠 Overview Dashboard",
                 "👤 Customer Lookup",
+                "🔄 Cohort Comparison",
                 "📈 Visual Insights",
                 "🔬 Clustering Analysis",
                 "💬 AI Assistant"
@@ -640,28 +870,112 @@ def main():
         )
         
         st.markdown("---")
+        
+        # Real-time Filters
+        st.markdown("### 🎛️ Filters")
+        with st.expander("⚡ Apply Filters", expanded=False):
+            st.markdown("**Filter data across all views:**")
+            
+            # Cluster filter
+            clusters_data = get_clusters("kmeans")
+            if clusters_data and 'clusters' in clusters_data:
+                df_clusters = pd.DataFrame(clusters_data['clusters'])
+                cluster_options = ['All'] + df_clusters['cluster_id'].tolist()
+                selected_clusters = st.multiselect(
+                    "Clusters",
+                    options=cluster_options[1:],
+                    default=[],
+                    help="Select specific clusters to analyze"
+                )
+                st.session_state.filters['clusters'] = selected_clusters if selected_clusters else []
+            
+            # Usage level filter
+            usage_level = st.select_slider(
+                "Usage Level",
+                options=['All', 'Low', 'Medium', 'High', 'Very High'],
+                value='All',
+                help="Filter by customer activity level"
+            )
+            st.session_state.filters['usage_level'] = usage_level
+            
+            # International filter
+            international = st.radio(
+                "International Users",
+                ['All', 'Domestic Only', 'International Only'],
+                horizontal=False,
+                help="Filter by international calling status"
+            )
+            st.session_state.filters['international'] = international
+            
+            # Show active filters
+            active_filters = []
+            if st.session_state.filters['clusters']:
+                active_filters.append(f"Clusters: {st.session_state.filters['clusters']}")
+            if st.session_state.filters['usage_level'] != 'All':
+                active_filters.append(f"Usage: {st.session_state.filters['usage_level']}")
+            if st.session_state.filters['international'] != 'All':
+                active_filters.append(f"Type: {st.session_state.filters['international']}")
+            
+            if active_filters:
+                st.caption("**Active:**")
+                for f in active_filters:
+                    st.caption(f"• {f}")
+            else:
+                st.caption("*No filters applied*")
+        
+        st.markdown("---")
         st.markdown("### 🔌 Backend Status")
+        
+        # Backend connection check
+        backend_status = None
+        customer_count = None
+        
         try:
             response = requests.get(f"{BACKEND_URL}/", timeout=5)
             if response.status_code == 200:
-                st.success("✅ Connected")
-                data = response.json()
-                st.caption(f"v{data.get('version', 'unknown')}")
+                backend_status = "connected"
+                try:
+                    data = response.json()
+                    customer_count = data.get('total_customers', 'N/A')
+                except:
+                    pass
             else:
-                st.error("❌ Error")
+                backend_status = "error"
+        except requests.exceptions.Timeout:
+            backend_status = "timeout"
+        except requests.exceptions.ConnectionError:
+            backend_status = "offline"
         except:
+            backend_status = "offline"
+        
+        # Display status
+        if backend_status == "connected":
+            st.success("✅ Connected")
+            if customer_count and isinstance(customer_count, (int, float)):
+                st.caption(f"Customers: {customer_count:,}")
+            elif customer_count:
+                st.caption(f"Customers: {customer_count}")
+        elif backend_status == "timeout":
+            st.warning("⏱️ Timeout")
+        elif backend_status == "error":
+            st.error("❌ Error")
+        else:
             st.error("❌ Offline")
         
         st.markdown("---")
         st.markdown("### ℹ️ About")
         st.markdown("""
-        **Features:**
+        **New Features:**
+        - 🎛️ Real-time filters
+        - 🔄 Cohort comparison
+        - 📥 Export/download
+        - 💡 AI insights panels
+        
+        **Core Features:**
         - ⏰ Time analysis
-        - 📨 SMS insights
-        - 🌐 Upload/Download split
+        - 🌐 Data split
         - 🌍 International details
         - 🤖 AI recommendations
-        - 🎨 Dynamic visualizations
         """)
     
     # Main content
@@ -674,6 +988,16 @@ def main():
         if stats:
             render_overview_metrics(stats)
             
+            # Export button for overview
+            st.markdown("---")
+            overview_data = {
+                'Total Customers': stats.get('total_customers'),
+                'Total Voice Calls': stats.get('voice', {}).get('total_calls'),
+                'Total Data MB': stats.get('data', {}).get('total_mb'),
+                'Total SMS': stats.get('sms', {}).get('total_messages')
+            }
+            create_export_buttons(data=overview_data, prefix="overview_dashboard")
+            
             st.markdown("---")
             
             tabs = st.tabs(["📞 Communication", "🌐 Internet", "💬 SMS"])
@@ -681,15 +1005,44 @@ def main():
             with tabs[0]:
                 time_analysis = get_time_analysis()
                 render_communication_insights(stats, time_analysis)
+                
+                # AI Insights for communication
+                context = f"""
+Communication statistics:
+- Total calls: {stats.get('voice', {}).get('total_calls', 0):,}
+- Peak time: {max(time_analysis.get('time_distribution', {'Morning': 0}).items(), key=lambda x: x[1])[0] if time_analysis else 'N/A'}
+- International users: {stats.get('international', {}).get('total_users', 0):,}
+"""
+                show_ai_insights(context, "communication analysis")
             
             with tabs[1]:
                 render_internet_insights(stats)
+                
+                # AI Insights for internet
+                context = f"""
+Internet usage statistics:
+- Total data: {stats.get('data', {}).get('total_mb', 0):,.0f} MB
+- Upload: {stats.get('data', {}).get('upload_mb', 0):,.0f} MB
+- Download: {stats.get('data', {}).get('download_mb', 0):,.0f} MB
+"""
+                show_ai_insights(context, "internet usage")
             
             with tabs[2]:
                 render_sms_insights(stats)
+                
+                # AI Insights for SMS
+                context = f"""
+SMS statistics:
+- Total messages: {stats.get('sms', {}).get('total_messages', 0):,}
+- Average per customer: {stats.get('sms', {}).get('avg_per_customer', 0):.1f}
+"""
+                show_ai_insights(context, "SMS analysis")
     
     elif page == "👤 Customer Lookup":
         render_customer_lookup()
+    
+    elif page == "🔄 Cohort Comparison":
+        render_cohort_comparison()
     
     elif page == "📈 Visual Insights":
         st.subheader("📊 Visual Insights")
@@ -699,6 +1052,7 @@ def main():
             ["Time Distribution", "Data Breakdown", "Customer Segments"]
         )
         
+        fig = None
         if viz_option == "Time Distribution":
             viz = get_visualization("time-distribution")
             if viz and 'chart' in viz:
@@ -716,12 +1070,29 @@ def main():
             if viz and 'chart' in viz:
                 fig = go.Figure(json.loads(viz['chart']))
                 st.plotly_chart(fig, use_container_width=True)
+        
+        # Export for visualizations
+        if fig:
+            create_export_buttons(chart=fig, prefix=f"viz_{viz_option.lower().replace(' ', '_')}")
     
     elif page == "🔬 Clustering Analysis":
         tab1, tab2 = st.tabs(["📊 View Clusters", "🔧 Run Custom Clustering"])
         
         with tab1:
             render_cluster_visualization()
+            
+            # AI Insights for clustering
+            clusters_data = get_clusters("kmeans")
+            if clusters_data and 'clusters' in clusters_data:
+                df_clusters = pd.DataFrame(clusters_data['clusters'])
+                context = f"""
+Clustering analysis with {len(df_clusters)} clusters:
+- Total customers: {df_clusters['size'].sum():,}
+- Largest cluster: {df_clusters['size'].max():,} customers
+- Average voice usage: {df_clusters['avg_voice_mins'].mean():.1f} mins
+- Average data usage: {df_clusters['avg_data_mb'].mean():.1f} MB
+"""
+                show_ai_insights(context, "clustering analysis")
         
         with tab2:
             render_dynamic_clustering()
