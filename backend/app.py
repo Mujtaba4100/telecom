@@ -352,6 +352,7 @@ def get_stats():
         # SMS stats
         "total_sms": int(df['sms_total_messages'].sum()),
         "avg_sms_per_user": float(df['sms_total_messages'].mean()),
+        "avg_sms_per_active_user": float(df[df['sms_total_messages'] > 0]['sms_total_messages'].mean()) if (df['sms_total_messages'] > 0).sum() > 0 else 0,
         "sms_users": int((df['sms_total_messages'] > 0).sum()),
         
         # Data stats

@@ -90,6 +90,32 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
+# UTILITY FUNCTIONS
+# ============================================
+
+def show_active_filters_banner():
+    """Display a banner showing currently active filters"""
+    if 'filters' not in st.session_state:
+        return False
+    
+    filters = st.session_state.filters
+    active_filters = []
+    
+    if filters.get('clusters'):
+        cluster_list = ', '.join(map(str, filters['clusters']))
+        active_filters.append(f"🎯 Clusters: {cluster_list}")
+    if filters.get('usage_level', 'All') != 'All':
+        active_filters.append(f"⚡ Usage: {filters['usage_level']}")
+    if filters.get('international', 'All') != 'All':
+        active_filters.append(f"🌍 {filters['international']}")
+    
+    if active_filters:
+        filter_text = " | ".join(active_filters)
+        st.info(f"🔍 **Active Filters:** {filter_text}")
+        return True
+    return False
+
+# ============================================
 # API FUNCTIONS
 # ============================================
 
@@ -337,15 +363,36 @@ def render_internet_insights(stats):
 def render_sms_insights(stats):
     st.subheader("💬 SMS Insights")
     
-    col1, col2, col3 = st.columns(3)
+    # Calculate meaningful metrics
+    sms_adoption_rate = (stats['sms_users'] / stats['total_customers'] * 100)
+    avg_per_active = stats.get('avg_sms_per_active_user', 2.0)  # Fallback if backend not updated
+    
+    # Alert if SMS usage is very low
+    if sms_adoption_rate < 5:
+        st.warning(f"⚠️ **Low SMS Adoption:** Only {sms_adoption_rate:.1f}% of customers use SMS. Most likely prefer OTT messaging apps (WhatsApp, Telegram, etc.)")
+    
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.metric("Total Messages", f"{stats['total_sms']:,}")
     with col2:
-        st.metric("Average per User", f"{stats['avg_sms_per_user']:.1f}")
-    with col3:
         st.metric("SMS Users", f"{stats['sms_users']:,}", 
-                  f"{stats['sms_users'] / stats['total_customers'] * 100:.1f}%")
+                  f"{sms_adoption_rate:.1f}% adoption")
+    with col3:
+        st.metric("Avg (Active Users)", f"{avg_per_active:.1f} msgs",
+                 help="Average messages among customers who actually use SMS")
+    with col4:
+        st.metric("Avg (All Users)", f"{stats['avg_sms_per_user']:.2f} msgs",
+                 help="Average across all customers (includes 98%+ with 0 SMS)")
+    
+    # Insight box
+    st.info(f"""
+    **📊 SMS Analysis:**
+    - **{stats['sms_users']:,}** customers sent SMS (only **{sms_adoption_rate:.1f}%** of total)
+    - Active SMS users average **{avg_per_active:.1f} messages** each
+    - **{stats['total_customers'] - stats['sms_users']:,}** customers (**{100-sms_adoption_rate:.1f}%**) sent **ZERO** SMS
+    - This suggests heavy reliance on OTT messaging apps (WhatsApp, Telegram, etc.)
+    """)
     
     # Frequency distribution
     freq_high = int(stats['sms_users'] * 0.25)  # Estimate
@@ -355,7 +402,7 @@ def render_sms_insights(stats):
     fig = px.bar(
         x=['High Frequency', 'Medium Frequency', 'Low Frequency'],
         y=[freq_high, freq_medium, freq_low],
-        title="SMS Frequency Distribution (Estimated)",
+        title="SMS Frequency Distribution (Among Active Users Only)",
         labels={'x': 'Frequency', 'y': 'Number of Users'},
         color=['High', 'Medium', 'Low'],
         color_discrete_sequence=['#E74C3C', '#F39C12', '#3498DB']
@@ -475,127 +522,134 @@ Provide response in this format:
 """
                     response = query_ai(context)
                     
-                    # Beautiful formatted output
-                    st.markdown("""
-                    <style>
-                    .recommendation-header {
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: white;
-                        padding: 20px;
-                        border-radius: 10px 10px 0 0;
-                        text-align: center;
-                        font-size: 24px;
-                        font-weight: bold;
-                        margin-bottom: 0;
-                    }
-                    .recommendation-body {
-                        background: #f8f9fa;
-                        padding: 25px;
-                        border-radius: 0 0 10px 10px;
-                        border: 2px solid #667eea;
-                        line-height: 1.8;
-                    }
-                    .usage-badge {
-                        display: inline-block;
-                        background: #e3f2fd;
-                        color: #1976d2;
-                        padding: 5px 12px;
-                        border-radius: 20px;
-                        font-size: 14px;
-                        font-weight: 600;
-                        margin: 5px 5px 5px 0;
-                    }
-                    .package-highlight {
-                        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-                        color: white;
-                        padding: 20px;
-                        border-radius: 10px;
-                        font-size: 18px;
-                        font-weight: bold;
-                        text-align: center;
-                        margin: 15px 0;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                    }
-                    </style>
-                    <div class="recommendation-header">
-                        💡 Personalized Package Recommendation
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Display formatted recommendation
-                    with st.container():
-                        st.markdown('<div class="recommendation-body">', unsafe_allow_html=True)
-                        
-                        # Usage summary badges
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            usage_level = "High" if comm['voice_total_calls'] > 500 else "Moderate" if comm['voice_total_calls'] > 200 else "Low"
-                            st.markdown(f'<div class="usage-badge">📞 Voice: {usage_level}</div>', unsafe_allow_html=True)
-                        with col2:
-                            data_level = "High" if internet['total_mb'] > 1000 else "Moderate" if internet['total_mb'] > 500 else "Low"
-                            st.markdown(f'<div class="usage-badge">📊 Data: {data_level}</div>', unsafe_allow_html=True)
-                        with col3:
-                            sms_level = "High" if sms['total_messages'] > 200 else "Moderate" if sms['total_messages'] > 50 else "Low"
-                            st.markdown(f'<div class="usage-badge">💬 SMS: {sms_level}</div>', unsafe_allow_html=True)
-                        with col4:
-                            if intl['is_international_user']:
-                                st.markdown(f'<div class="usage-badge">🌍 International</div>', unsafe_allow_html=True)
-                            else:
-                                st.markdown(f'<div class="usage-badge">🏠 Domestic Only</div>', unsafe_allow_html=True)
-                        
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        
-                        # AI Response with better formatting
-                        ai_text = response['answer']
-                        
-                        # Try to parse sections (if AI follows format)
-                        sections = {
-                            'profile': '',
-                            'package': '',
-                            'benefits': '',
-                            'pricing': ''
+                    # Check for errors first
+                    if response and 'error' in response:
+                        st.error(f"❌ {response['error']}")
+                        st.info("💡 Please check your backend connection and Gemini API key configuration.")
+                    elif response and 'answer' in response:
+                        # Beautiful formatted output
+                        st.markdown("""
+                        <style>
+                        .recommendation-header {
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            padding: 20px;
+                            border-radius: 10px 10px 0 0;
+                            text-align: center;
+                            font-size: 24px;
+                            font-weight: bold;
+                            margin-bottom: 0;
                         }
+                        .recommendation-body {
+                            background: #f8f9fa;
+                            padding: 25px;
+                            border-radius: 0 0 10px 10px;
+                            border: 2px solid #667eea;
+                            line-height: 1.8;
+                        }
+                        .usage-badge {
+                            display: inline-block;
+                            background: #e3f2fd;
+                            color: #1976d2;
+                            padding: 5px 12px;
+                            border-radius: 20px;
+                            font-size: 14px;
+                            font-weight: 600;
+                            margin: 5px 5px 5px 0;
+                        }
+                        .package-highlight {
+                            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                            color: white;
+                            padding: 20px;
+                            border-radius: 10px;
+                            font-size: 18px;
+                            font-weight: bold;
+                            text-align: center;
+                            margin: 15px 0;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                        }
+                        </style>
+                        <div class="recommendation-header">
+                            💡 Personalized Package Recommendation
+                        </div>
+                        """, unsafe_allow_html=True)
                         
-                        # Simple parsing (fallback to full text if not structured)
-                        if any(keyword in ai_text.lower() for keyword in ['usage profile', 'recommended package', 'benefits', 'pricing']):
-                            # Structured response
-                            lines = ai_text.split('\n')
-                            current_section = None
-                            for line in lines:
-                                line_lower = line.lower()
-                                if 'usage profile' in line_lower or 'profile' in line_lower and len(line) < 50:
-                                    current_section = 'profile'
-                                elif 'recommended package' in line_lower or 'package' in line_lower and len(line) < 50:
-                                    current_section = 'package'
-                                elif 'benefit' in line_lower and len(line) < 50:
-                                    current_section = 'benefits'
-                                elif 'pricing' in line_lower and len(line) < 50:
-                                    current_section = 'pricing'
-                                elif current_section and line.strip():
-                                    sections[current_section] += line + '\n'
+                        # Display formatted recommendation
+                        with st.container():
+                            st.markdown('<div class="recommendation-body">', unsafe_allow_html=True)
                             
-                            # Display structured
-                            if sections['profile']:
-                                st.markdown("**📋 Usage Profile Analysis**")
-                                st.info(sections['profile'].strip())
+                            # Usage summary badges
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                usage_level = "High" if comm['voice_total_calls'] > 500 else "Moderate" if comm['voice_total_calls'] > 200 else "Low"
+                                st.markdown(f'<div class="usage-badge">📞 Voice: {usage_level}</div>', unsafe_allow_html=True)
+                            with col2:
+                                data_level = "High" if internet['total_mb'] > 1000 else "Moderate" if internet['total_mb'] > 500 else "Low"
+                                st.markdown(f'<div class="usage-badge">📊 Data: {data_level}</div>', unsafe_allow_html=True)
+                            with col3:
+                                sms_level = "High" if sms['total_messages'] > 200 else "Moderate" if sms['total_messages'] > 50 else "Low"
+                                st.markdown(f'<div class="usage-badge">💬 SMS: {sms_level}</div>', unsafe_allow_html=True)
+                            with col4:
+                                if intl['is_international_user']:
+                                    st.markdown(f'<div class="usage-badge">🌍 International</div>', unsafe_allow_html=True)
+                                else:
+                                    st.markdown(f'<div class="usage-badge">🏠 Domestic Only</div>', unsafe_allow_html=True)
                             
-                            if sections['package']:
-                                st.markdown("**🎁 Recommended Package**")
-                                st.markdown(f'<div class="package-highlight">{sections["package"].strip()}</div>', unsafe_allow_html=True)
+                            st.markdown("<br>", unsafe_allow_html=True)
                             
-                            if sections['benefits']:
-                                st.markdown("**✨ Key Benefits**")
-                                st.success(sections['benefits'].strip())
+                            # AI Response with better formatting
+                            ai_text = response['answer']
                             
-                            if sections['pricing']:
-                                st.markdown("**💰 Pricing Strategy**")
-                                st.warning(sections['pricing'].strip())
-                        else:
-                            # Fallback: display full text nicely
-                            st.markdown("**📋 Analysis & Recommendation**")
-                            st.markdown(ai_text)
-                        
-                        st.markdown('</div>', unsafe_allow_html=True)
+                            # Try to parse sections (if AI follows format)
+                            sections = {
+                                'profile': '',
+                                'package': '',
+                                'benefits': '',
+                                'pricing': ''
+                            }
+                            
+                            # Simple parsing (fallback to full text if not structured)
+                            if any(keyword in ai_text.lower() for keyword in ['usage profile', 'recommended package', 'benefits', 'pricing']):
+                                # Structured response
+                                lines = ai_text.split('\n')
+                                current_section = None
+                                for line in lines:
+                                    line_lower = line.lower()
+                                    if 'usage profile' in line_lower or 'profile' in line_lower and len(line) < 50:
+                                        current_section = 'profile'
+                                    elif 'recommended package' in line_lower or 'package' in line_lower and len(line) < 50:
+                                        current_section = 'package'
+                                    elif 'benefit' in line_lower and len(line) < 50:
+                                        current_section = 'benefits'
+                                    elif 'pricing' in line_lower and len(line) < 50:
+                                        current_section = 'pricing'
+                                    elif current_section and line.strip():
+                                        sections[current_section] += line + '\n'
+                                
+                                # Display structured
+                                if sections['profile']:
+                                    st.markdown("**📋 Usage Profile Analysis**")
+                                    st.info(sections['profile'].strip())
+                                
+                                if sections['package']:
+                                    st.markdown("**🎁 Recommended Package**")
+                                    st.markdown(f'<div class="package-highlight">{sections["package"].strip()}</div>', unsafe_allow_html=True)
+                                
+                                if sections['benefits']:
+                                    st.markdown("**✨ Key Benefits**")
+                                    st.success(sections['benefits'].strip())
+                                
+                                if sections['pricing']:
+                                    st.markdown("**💰 Pricing Strategy**")
+                                    st.warning(sections['pricing'].strip())
+                            else:
+                                # Fallback: display full text nicely
+                                st.markdown("**📋 Analysis & Recommendation**")
+                                st.markdown(ai_text)
+                            
+                            st.markdown('</div>', unsafe_allow_html=True)
+                    else:
+                        st.warning("⚠️ Unable to generate AI recommendation. Please try again later.")
             
             else:
                 st.error(f"❌ Customer {customer_id} not found")
@@ -609,6 +663,16 @@ def render_cluster_visualization():
     
     if clusters:
         df_clusters = pd.DataFrame(clusters['clusters'])
+        total_clusters = len(df_clusters)
+        
+        # Apply cluster filter if active
+        if 'filters' in st.session_state and st.session_state.filters.get('clusters'):
+            selected_cluster_ids = st.session_state.filters['clusters']
+            df_clusters = df_clusters[df_clusters['cluster_id'].isin(selected_cluster_ids)]
+            if df_clusters.empty:
+                st.warning(f"⚠️ No clusters match your filter selection: {selected_cluster_ids}")
+                return
+            st.success(f"✅ Showing {len(df_clusters)} filtered cluster(s) out of {total_clusters} total")
         
         # Pie chart
         fig = px.pie(
@@ -700,12 +764,25 @@ def render_cohort_comparison():
     st.subheader("🔄 Cohort Comparison")
     st.markdown("Compare two customer segments side-by-side")
     
+    # Show active filters banner
+    filters_active = show_active_filters_banner()
+    
     clusters_data = get_clusters("kmeans")
     if not clusters_data or 'clusters' not in clusters_data:
         st.error("Unable to load cluster data")
         return
     
     df_clusters = pd.DataFrame(clusters_data['clusters'])
+    
+    # Apply cluster filter if active
+    if 'filters' in st.session_state and st.session_state.filters.get('clusters'):
+        selected_cluster_ids = st.session_state.filters['clusters']
+        df_clusters = df_clusters[df_clusters['cluster_id'].isin(selected_cluster_ids)]
+        if df_clusters.empty:
+            st.warning(f"No clusters match your filter selection: {selected_cluster_ids}")
+            return
+        st.success(f"✅ Showing {len(df_clusters)} filtered cluster(s) out of {len(clusters_data['clusters'])} total")
+    
     cluster_options = df_clusters['cluster_id'].tolist()
     
     col1, col2 = st.columns(2)
@@ -830,12 +907,44 @@ def render_cohort_comparison():
     st.plotly_chart(fig, use_container_width=True)
     create_export_buttons(chart=fig, prefix="cohort_comparison_chart")
     
-    # AI Insights for comparison
+    # AI Insights for comparison - comprehensive cohort analysis
+    voice_a = cluster_a.get('avg_voice_mins', 0)
+    voice_b = cluster_b.get('avg_voice_mins', 0)
+    data_a = cluster_a.get('avg_data_mb', 0)
+    data_b = cluster_b.get('avg_data_mb', 0)
+    sms_a = cluster_a.get('avg_sms', 0)
+    sms_b = cluster_b.get('avg_sms', 0)
+    
+    voice_diff = ((voice_b - voice_a) / voice_a * 100) if voice_a > 0 else 0
+    data_diff = ((data_b - data_a) / data_a * 100) if data_a > 0 else 0
+    sms_diff = ((sms_b - sms_a) / sms_a * 100) if sms_a > 0 else 0
+    
     context = f"""
-Comparing Cluster {cohort_a} ({cluster_a['size']:,} customers) vs Cluster {cohort_b} ({cluster_b['size']:,} customers):
-- Voice: {cluster_a.get('avg_voice_mins', 0):.1f} vs {cluster_b.get('avg_voice_mins', 0):.1f} mins
-- Data: {cluster_a.get('avg_data_mb', 0):.1f} vs {cluster_b.get('avg_data_mb', 0):.1f} MB
-- SMS: {cluster_a.get('avg_sms', 0):.1f} vs {cluster_b.get('avg_sms', 0):.1f} messages
+COHORT COMPARISON ANALYSIS:
+
+Segment Sizes:
+- Cluster {cohort_a}: {cluster_a['size']:,} customers
+- Cluster {cohort_b}: {cluster_b['size']:,} customers
+
+Voice Usage Comparison:
+- Cluster {cohort_a}: {voice_a:.1f} mins/customer
+- Cluster {cohort_b}: {voice_b:.1f} mins/customer
+- Difference: {voice_diff:+.1f}%
+
+Data Usage Comparison:
+- Cluster {cohort_a}: {data_a:.1f} MB/customer
+- Cluster {cohort_b}: {data_b:.1f} MB/customer
+- Difference: {data_diff:+.1f}%
+
+SMS Usage Comparison:
+- Cluster {cohort_a}: {sms_a:.1f} messages/customer
+- Cluster {cohort_b}: {sms_b:.1f} messages/customer
+- Difference: {sms_diff:+.1f}%
+
+Provide 3 insights about:
+1. Key behavioral differences between these segments
+2. Which segment is more valuable and why
+3. Specific targeting or upsell opportunities for each segment
 """
     show_ai_insights(context, "cohort comparison")
 
@@ -844,14 +953,6 @@ Comparing Cluster {cohort_a} ({cluster_a['size']:,} customers) vs Cluster {cohor
 # ============================================
 
 def main():
-    # Initialize session state for filters
-    if 'filters' not in st.session_state:
-        st.session_state.filters = {
-            'clusters': [],
-            'usage_level': 'All',
-            'international': 'All'
-        }
-    
     # Sidebar
     with st.sidebar:
         st.image("https://img.icons8.com/color/96/000000/phone.png", width=80)
@@ -870,60 +971,6 @@ def main():
         )
         
         st.markdown("---")
-        
-        # Real-time Filters
-        st.markdown("### 🎛️ Filters")
-        with st.expander("⚡ Apply Filters", expanded=False):
-            st.markdown("**Filter data across all views:**")
-            
-            # Cluster filter
-            clusters_data = get_clusters("kmeans")
-            if clusters_data and 'clusters' in clusters_data:
-                df_clusters = pd.DataFrame(clusters_data['clusters'])
-                cluster_options = ['All'] + df_clusters['cluster_id'].tolist()
-                selected_clusters = st.multiselect(
-                    "Clusters",
-                    options=cluster_options[1:],
-                    default=[],
-                    help="Select specific clusters to analyze"
-                )
-                st.session_state.filters['clusters'] = selected_clusters if selected_clusters else []
-            
-            # Usage level filter
-            usage_level = st.select_slider(
-                "Usage Level",
-                options=['All', 'Low', 'Medium', 'High', 'Very High'],
-                value='All',
-                help="Filter by customer activity level"
-            )
-            st.session_state.filters['usage_level'] = usage_level
-            
-            # International filter
-            international = st.radio(
-                "International Users",
-                ['All', 'Domestic Only', 'International Only'],
-                horizontal=False,
-                help="Filter by international calling status"
-            )
-            st.session_state.filters['international'] = international
-            
-            # Show active filters
-            active_filters = []
-            if st.session_state.filters['clusters']:
-                active_filters.append(f"Clusters: {st.session_state.filters['clusters']}")
-            if st.session_state.filters['usage_level'] != 'All':
-                active_filters.append(f"Usage: {st.session_state.filters['usage_level']}")
-            if st.session_state.filters['international'] != 'All':
-                active_filters.append(f"Type: {st.session_state.filters['international']}")
-            
-            if active_filters:
-                st.caption("**Active:**")
-                for f in active_filters:
-                    st.caption(f"• {f}")
-            else:
-                st.caption("*No filters applied*")
-        
-        st.markdown("---")
         st.markdown("### 🔌 Backend Status")
         
         # Backend connection check
@@ -936,7 +983,8 @@ def main():
                 backend_status = "connected"
                 try:
                     data = response.json()
-                    customer_count = data.get('total_customers', 'N/A')
+                    # Backend returns 'customers' key, not 'total_customers'
+                    customer_count = data.get('customers') or data.get('total_customers', 'N/A')
                 except:
                     pass
             else:
@@ -985,6 +1033,9 @@ def main():
     stats = get_stats()
     
     if page == "🏠 Overview Dashboard":
+        # Show active filters banner
+        show_active_filters_banner()
+        
         if stats:
             render_overview_metrics(stats)
             
@@ -1006,45 +1057,103 @@ def main():
                 time_analysis = get_time_analysis()
                 render_communication_insights(stats, time_analysis)
                 
-                # AI Insights for communication
+                # AI Insights for communication - ONLY voice/call related
+                voice_stats = stats.get('voice', {})
+                intl_stats = stats.get('international', {})
+                time_dist = time_analysis.get('time_distribution', {}) if time_analysis else {}
+                
                 context = f"""
-Communication statistics:
-- Total calls: {stats.get('voice', {}).get('total_calls', 0):,}
-- Peak time: {max(time_analysis.get('time_distribution', {'Morning': 0}).items(), key=lambda x: x[1])[0] if time_analysis else 'N/A'}
-- International users: {stats.get('international', {}).get('total_users', 0):,}
+VOICE COMMUNICATION ANALYSIS (focus ONLY on voice/calls, no data/SMS):
+
+Call Volume:
+- Total voice calls: {voice_stats.get('total_calls', 0):,}
+- Total voice minutes: {voice_stats.get('total_minutes', 0):,.0f}
+- Average calls per customer: {voice_stats.get('avg_calls_per_customer', 0):.1f}
+- Average duration per call: {voice_stats.get('avg_duration_per_call', 0):.1f} mins
+
+Time Distribution:
+- Morning (6am-12pm): {time_dist.get('Morning', 0):,} calls ({time_dist.get('Morning', 0) / sum(time_dist.values()) * 100 if sum(time_dist.values()) > 0 else 0:.1f}%)
+- Evening (12pm-6pm): {time_dist.get('Evening', 0):,} calls ({time_dist.get('Evening', 0) / sum(time_dist.values()) * 100 if sum(time_dist.values()) > 0 else 0:.1f}%)
+- Night (6pm-6am): {time_dist.get('Night', 0):,} calls ({time_dist.get('Night', 0) / sum(time_dist.values()) * 100 if sum(time_dist.values()) > 0 else 0:.1f}%)
+
+International Calling:
+- International users: {intl_stats.get('total_users', 0):,} ({intl_stats.get('percentage', 0):.2f}%)
+- Total international calls: {intl_stats.get('total_calls', 0):,}
+- Countries reached: {intl_stats.get('unique_countries', 0)}
+
+Provide 3 insights specifically about VOICE CALLING patterns, peak times, and international calling opportunities.
 """
                 show_ai_insights(context, "communication analysis")
             
             with tabs[1]:
                 render_internet_insights(stats)
                 
-                # AI Insights for internet
+                # AI Insights for internet - ONLY data/internet related
+                data_stats = stats.get('data', {})
+                total_data_mb = data_stats.get('total_mb', 0)
+                upload_mb = data_stats.get('upload_mb', 0)
+                download_mb = data_stats.get('download_mb', 0)
+                avg_data_mb = data_stats.get('avg_mb_per_customer', 0)
+                
                 context = f"""
-Internet usage statistics:
-- Total data: {stats.get('data', {}).get('total_mb', 0):,.0f} MB
-- Upload: {stats.get('data', {}).get('upload_mb', 0):,.0f} MB
-- Download: {stats.get('data', {}).get('download_mb', 0):,.0f} MB
+INTERNET DATA USAGE ANALYSIS (focus ONLY on data/internet, no voice/SMS):
+
+Data Volume:
+- Total data consumed: {total_data_mb:,.0f} MB ({total_data_mb/1024:.1f} GB)
+- Average per customer: {avg_data_mb:.1f} MB
+- Data heavy users (>1GB): {data_stats.get('data_lovers', 0):,} customers
+
+Upload vs Download:
+- Total upload: {upload_mb:,.0f} MB ({upload_mb/1024:.1f} GB)
+- Total download: {download_mb:,.0f} MB ({download_mb/1024:.1f} GB)
+- Upload percentage: {(upload_mb / total_data_mb * 100) if total_data_mb > 0 else 0:.1f}%
+- Download percentage: {(download_mb / total_data_mb * 100) if total_data_mb > 0 else 0:.1f}%
+- Upload to download ratio: {(upload_mb / download_mb) if download_mb > 0 else 0:.2f}:1
+
+Provide 3 insights specifically about DATA USAGE patterns, upload vs download behavior, and data package opportunities.
 """
                 show_ai_insights(context, "internet usage")
             
             with tabs[2]:
                 render_sms_insights(stats)
                 
-                # AI Insights for SMS
+                # AI Insights for SMS - ONLY SMS related
+                sms_stats = stats.get('sms', {})
+                total_customers = stats.get('total_customers', 1)
+                
                 context = f"""
-SMS statistics:
-- Total messages: {stats.get('sms', {}).get('total_messages', 0):,}
-- Average per customer: {stats.get('sms', {}).get('avg_per_customer', 0):.1f}
+SMS MESSAGING ANALYSIS (focus ONLY on SMS/text messaging, no voice/data):
+
+SMS Volume:
+- Total SMS messages: {sms_stats.get('total_messages', 0):,}
+- Average per customer: {sms_stats.get('avg_per_customer', 0):.2f} messages
+- Total customers: {total_customers:,}
+- SMS active users: {sms_stats.get('active_users', 0):,}
+
+Usage Context:
+- SMS appears to be {'very low' if sms_stats.get('avg_per_customer', 0) < 1 else 'moderate' if sms_stats.get('avg_per_customer', 0) < 50 else 'high'} usage
+- This suggests customers may prefer messaging apps over traditional SMS
+
+Provide 3 insights specifically about SMS USAGE patterns, why SMS might be low/high, and SMS package/strategy recommendations.
 """
                 show_ai_insights(context, "SMS analysis")
     
     elif page == "👤 Customer Lookup":
+        # Show active filters banner
+        show_active_filters_banner()
+        
         render_customer_lookup()
     
     elif page == "🔄 Cohort Comparison":
+        # Show active filters banner
+        show_active_filters_banner()
+        
         render_cohort_comparison()
     
     elif page == "📈 Visual Insights":
+        # Show active filters banner
+        show_active_filters_banner()
+        
         st.subheader("📊 Visual Insights")
         
         viz_option = st.selectbox(
@@ -1076,21 +1185,41 @@ SMS statistics:
             create_export_buttons(chart=fig, prefix=f"viz_{viz_option.lower().replace(' ', '_')}")
     
     elif page == "🔬 Clustering Analysis":
+        # Show active filters banner
+        show_active_filters_banner()
+        
         tab1, tab2 = st.tabs(["📊 View Clusters", "🔧 Run Custom Clustering"])
         
         with tab1:
             render_cluster_visualization()
             
-            # AI Insights for clustering
+            # AI Insights for clustering - comprehensive cluster patterns
             clusters_data = get_clusters("kmeans")
             if clusters_data and 'clusters' in clusters_data:
                 df_clusters = pd.DataFrame(clusters_data['clusters'])
+                total_customers = df_clusters['size'].sum()
+                
                 context = f"""
-Clustering analysis with {len(df_clusters)} clusters:
-- Total customers: {df_clusters['size'].sum():,}
-- Largest cluster: {df_clusters['size'].max():,} customers
-- Average voice usage: {df_clusters['avg_voice_mins'].mean():.1f} mins
-- Average data usage: {df_clusters['avg_data_mb'].mean():.1f} MB
+CLUSTERING PATTERN ANALYSIS:
+
+Cluster Overview:
+- Total clusters: {len(df_clusters)}
+- Total customers analyzed: {total_customers:,}
+- Largest cluster: {df_clusters['size'].max():,} customers ({df_clusters['size'].max()/total_customers*100:.1f}%)
+- Smallest cluster: {df_clusters['size'].min():,} customers ({df_clusters['size'].min()/total_customers*100:.1f}%)
+
+Usage Pattern Across Clusters:
+- Average voice usage: {df_clusters['avg_voice_mins'].mean():.1f} mins (range: {df_clusters['avg_voice_mins'].min():.1f} - {df_clusters['avg_voice_mins'].max():.1f})
+- Average data usage: {df_clusters['avg_data_mb'].mean():.1f} MB (range: {df_clusters['avg_data_mb'].min():.1f} - {df_clusters['avg_data_mb'].max():.1f})
+- Average SMS: {df_clusters['avg_sms'].mean():.1f} messages (range: {df_clusters['avg_sms'].min():.1f} - {df_clusters['avg_sms'].max():.1f})
+
+Cluster Distribution:
+{chr(10).join([f'- Cluster {row["cluster_id"]}: {row["size"]:,} customers ({row["size"]/total_customers*100:.1f}%)' for _, row in df_clusters.iterrows()])}
+
+Provide 3 insights about:
+1. Most valuable cluster and why
+2. Underserved or at-risk cluster
+3. Opportunities to move customers between clusters (upsell/retention)
 """
                 show_ai_insights(context, "clustering analysis")
         
@@ -1098,6 +1227,9 @@ Clustering analysis with {len(df_clusters)} clusters:
             render_dynamic_clustering()
     
     elif page == "💬 AI Assistant":
+        # Show active filters banner
+        show_active_filters_banner()
+        
         render_ai_chat()
 
 
