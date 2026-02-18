@@ -38,6 +38,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
 
+# Global flag for FAISS initialization
+faiss_building = False
+
 # Visualization imports
 import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend
@@ -127,7 +130,8 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"⚠ Gemini error: {e}")
     
-    init_faiss_index()
+    # FAISS index will build on first search request (lazy loading)
+    print("ℹ FAISS index will build on first search request")
     print("✅ API ready!")
     
     yield
@@ -687,8 +691,21 @@ Provide a clear, concise answer based on the statistics above.
 @app.get("/api/search")
 def semantic_search(query: str = Query(..., description="Search query"), limit: int = 10):
     """Semantic search for customers"""
-    if embedding_model is None or faiss_index is None:
-        raise HTTPException(status_code=503, detail="Search not available")
+    global faiss_index, faiss_building
+    
+    if embedding_model is None:
+        raise HTTPException(status_code=503, detail="Embedding model not available")
+    
+    # Lazy load FAISS index on first request
+    if faiss_index is None and not faiss_building:
+        faiss_building = True
+        try:
+            init_faiss_index()
+        finally:
+            faiss_building = False
+    
+    if faiss_index is None:
+        raise HTTPException(status_code=503, detail="FAISS index building, please try again in a moment")
     
     # Embed query
     query_embedding = embedding_model.encode([query])
