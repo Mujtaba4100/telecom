@@ -28,7 +28,7 @@
 │   Frontend      │   HTTP  │    Backend       │  Query  │   External      │
 │   (Streamlit)   │ ◄─────► │    (FastAPI)     │ ◄─────► │   Services      │
 │                 │         │                  │         │                 │
-│  - 6 Pages      │         │  - 8+ Endpoints  │         │  - Gemini LLM   │
+│  - 6 Pages      │         │  - 8+ Endpoints  │         │  - Groq LLM     │
 │  - Plotly viz   │         │  - SQLite DB     │         │  - HuggingFace  │
 │  - Export/AI    │         │  - FAISS Search  │         │    Embeddings   │
 └─────────────────┘         └──────────────────┘         └─────────────────┘
@@ -38,7 +38,7 @@
 1. User interacts with Streamlit UI
 2. Frontend sends HTTP requests to FastAPI backend
 3. Backend queries SQLite database or generates analytics
-4. Backend calls Gemini for AI insights (optional)
+4. Backend calls Groq for AI insights (optional)
 5. Backend returns JSON response
 6. Frontend renders data with Plotly visualizations
 
@@ -55,7 +55,7 @@ INTL_DATA_PATH = "international_calls.csv"            # 16,133 international use
 CLUSTERED_DATA_PATH = "golden_table_clustered.csv"   # Pre-clustered results
 
 # API Keys (from environment)
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")         # For AI queries
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")         # For AI queries
 ```
 
 **What to explain:**
@@ -109,14 +109,13 @@ def build_faiss_index():
 - "FAISS enables searching 266K customers in milliseconds"
 - "Used for semantic 'find similar customers' queries"
 
-#### **C. Gemini LLM (Natural Language Interface)**
+#### **C. Groq LLM (Natural Language Interface)**
 ```python
-genai.configure(api_key=GEMINI_API_KEY)
-model_gemini = genai.GenerativeModel('gemini-pro')
+groq_client = Groq(api_key=GROQ_API_KEY)
 ```
 - **Purpose:** Answer questions in natural language
 - **Context:** We inject customer statistics + cluster insights
-- **Example:** "Which cluster has highest international usage?" → Gemini analyzes data → Returns answer
+- **Example:** "Which cluster has highest international usage?" → Groq analyzes data → Returns answer
 
 ---
 
@@ -250,14 +249,14 @@ async def query_ai(request: QueryRequest):
     # Input: Natural language question
     # Process:
     #   1. Load customer stats + cluster info
-    #   2. Build context for Gemini (JSON data)
-    #   3. Send to Gemini with question
-    #   4. Return Gemini's analysis
+    #   2. Build context for Groq (JSON data)
+    #   3. Send to Groq with question
+    #   4. Return Groq's analysis
 ```
 
 **Demo question:** "Which customer segment uses the most data?"
 
-**Gemini receives:**
+**Groq receives:**
 ```
 Database statistics:
 - 266,322 customers
@@ -400,7 +399,7 @@ def show_ai_insights(context, view_name="current view"):
         st.info(response['answer'])
 ```
 
-**Context provided to Gemini:**
+**Context provided to Groq:**
 1. **Communication Tab:** Voice stats, time distribution, international details
 2. **Internet Tab:** Data volume, upload/download ratios, heavy users
 3. **SMS Tab:** Message volume, adoption rate (1.9%), active user average (2.0)
@@ -512,7 +511,7 @@ def render_customer_lookup():
      * Recommended Package (highlighted)
      * Key Benefits
      * Pricing Strategy
-   - Fallback error handling if Gemini API unavailable
+   - Fallback error handling if Groq API unavailable
     # Displays: 4 expandable sections
     #   1. Communication Details
     #   2. International Activity
@@ -547,7 +546,7 @@ def render_customer_lookup():
    Peak Time: Evening (132 messages)
    ```
 6. **AI Button:** Click "Get AI Recommendations"
-   - Sends customer data to Gemini
+   - Sends customer data to Groq
    - Returns: "This customer shows high voice usage with moderate data. Consider offering voice+data bundle..."
 
 **Code highlight:**
@@ -707,21 +706,21 @@ def render_ai_assistant():
     # Natural language interface to data
     # Process:
     #   1. User types question
-    #   2. Send to /api/query (Gemini endpoint)
-    #   3. Gemini analyzes data + returns answer
+    #   2. Send to /api/query (Groq endpoint)
+    #   3. Groq analyzes data + returns answer
     #   4. Display formatted response
 ```
 
 **Demo questions to ask:**
 
 1. **"Which cluster has the highest data usage?"**
-   - Gemini: "Cluster 3 has the highest average data usage at 1,847 MB per customer. This cluster represents 12.4% of total customers (33,024 users) and shows characteristics of heavy data consumers with moderate voice usage."
+   - Groq: "Cluster 3 has the highest average data usage at 1,847 MB per customer. This cluster represents 12.4% of total customers (33,024 users) and shows characteristics of heavy data consumers with moderate voice usage."
 
 2. **"What percentage of customers use international calling?"**
-   - Gemini: "6.06% of customers (16,133 out of 266,322) have made international calls. These users collectively called 47 different countries."
+   - Groq: "6.06% of customers (16,133 out of 266,322) have made international calls. These users collectively called 47 different countries."
 
 3. **"Suggest a pricing plan for high-value customers"**
-   - Gemini: "For high-value customers (Cluster 0 with 412+ mins voice and 523+ MB data), consider a premium plan: Unlimited voice + 5GB data + international calling to 10 countries for $49.99/month."
+   - Groq: "For high-value customers (Cluster 0 with 412+ mins voice and 523+ MB data), consider a premium plan: Unlimited voice + 5GB data + international calling to 10 countries for $49.99/month."
 
 **Code highlight:**
 ```python
@@ -777,7 +776,7 @@ Show: Complete customer profile in JSON
 - Expand all 4 sections
 - Scroll to AI-Powered Recommendations
 - Show usage badges and structured recommendation
-- Mention error handling if Gemini is down
+- Mention error handling if Groq is down
 
 **Page 3 - Cohort Comparison (2 mins):**
 - Select Cluster 0 vs Cluster 2
@@ -800,7 +799,7 @@ Show: Complete customer profile in JSON
 
 **Page 6 - AI Assistant (1 min):**
 - Ask: "Which cluster uses the most data?"
-- Show Gemini's detailed analysis
+- Show Groq's detailed analysis
 - Ask follow-up: "What's the business opportunity here?"
 
 ### **4. Code Deep Dive (5 mins)**
@@ -814,7 +813,7 @@ Show: Complete customer profile in JSON
 "We embed 266K customers into vectors for semantic search"
 
 # Show /api/query endpoint
-"Here's where we integrate Gemini - we build context and send to LLM"
+"Here's where we integrate Groq - we build context and send to LLM"
 ```
 
 **Frontend - Key Components:**
@@ -840,7 +839,7 @@ Show: Complete customer profile in JSON
 
 ### **2. AI Integration**
 - "HuggingFace embeddings for semantic search (all-MiniLM-L6-v2)"
-- "Gemini LLM for natural language interface"
+- "Groq LLM for natural language interface"
 - "Context-aware responses using customer statistics"
 
 ### **3. Modularity**
@@ -870,8 +869,8 @@ A: "Backend does heavy lifting. Frontend only fetches what's needed (stats, indi
 **Q: Why FastAPI over Flask?**
 A: "FastAPI has automatic API docs (Swagger), async support, and Pydantic validation. It's faster and more modern."
 
-**Q: How accurate is Gemini's analysis?**
-A: "Very accurate - we inject actual statistics as context. Gemini doesn't guess, it analyzes real numbers we provide."
+**Q: How accurate is Groq's analysis?**
+A: "Very accurate - we inject actual statistics as context. Groq doesn't guess, it analyzes real numbers we provide."
 
 **Q: Can users upload new data?**
 A: "Not currently, but easy to add. We'd create a POST /api/upload endpoint to accept CSV files."

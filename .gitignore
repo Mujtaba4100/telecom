@@ -32,3 +32,4 @@ Thumbs.db
 # Logs
 *.log
 *.csv
+grok_api.txt

@@ -8,7 +8,7 @@ FastAPI backend with:
 - Upload/Download breakdown
 - Dynamic visualization generation
 - On-demand clustering
-- Gemini LLM integration
+- Groq LLM integration
 - HuggingFace embeddings for semantic search
 """
 
@@ -28,7 +28,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
-import google.generativeai as genai
+from groq import Groq
 from sentence_transformers import SentenceTransformer
 import faiss
 
@@ -52,9 +52,7 @@ import plotly.express as px
 # CONFIGURATION
 # ============================================
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 # Data paths
 MERGED_DATA_PATH = "merged_subscriber_data.csv"
@@ -70,7 +68,7 @@ df_full = None  # Full data with all fields
 conn = None
 embedding_model = None
 faiss_index = None
-gemini_model = None
+groq_client = None
 
 
 # ============================================
@@ -80,7 +78,7 @@ gemini_model = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize resources on startup"""
-    global df, df_full, conn, embedding_model, faiss_index, gemini_model
+    global df, df_full, conn, embedding_model, faiss_index, groq_client
     
     print("🚀 Starting Enhanced Telecom API...")
     
@@ -123,12 +121,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠ Embedding model error: {e}")
     
-    if GEMINI_API_KEY:
+    if GROQ_API_KEY:
         try:
-            gemini_model = genai.GenerativeModel('gemini-2.5-flash')
-            print("✓ Initialized Gemini")
+            groq_client = Groq(api_key=GROQ_API_KEY)
+            print("✓ Initialized Groq")
         except Exception as e:
-            print(f"⚠ Gemini error: {e}")
+            print(f"⚠ Groq error: {e}")
     
     # FAISS index will build on first search request (lazy loading)
     print("ℹ FAISS index will build on first search request")
@@ -629,9 +627,9 @@ def run_clustering(request: ClusterRequest):
 
 @app.post("/api/query")
 def query_with_llm(request: QueryRequest):
-    """Query data using Gemini LLM"""
-    if gemini_model is None:
-        raise HTTPException(status_code=503, detail="Gemini API not configured")
+    """Query data using Groq LLM"""
+    if groq_client is None:
+        raise HTTPException(status_code=503, detail="Groq API not configured")
     
     # Build context with safe column access
     def safe_col_sum(col_name, default=0):
@@ -693,8 +691,13 @@ INSTRUCTIONS:
 """
     
     try:
-        response = gemini_model.generate_content(context)
-        return QueryResponse(answer=response.text, data=None)
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": context}],
+            temperature=0.7,
+            max_tokens=1024
+        )
+        return QueryResponse(answer=response.choices[0].message.content, data=None)
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()

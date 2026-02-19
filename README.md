@@ -19,7 +19,7 @@ Complete AI-powered customer analytics platform with clustering, visualizations,
 - 📈 Usage patterns
 
 ### ✅ AI-Powered Features
-- 🤖 Gemini LLM for intelligent insights
+- 🤖 Groq LLM for intelligent insights
 - 🔍 Semantic search with HuggingFace embeddings
 - 💡 Personalized package recommendations
 
@@ -45,9 +45,9 @@ pip install -r frontend/requirements.txt
 
 ### 2. Set API Key
 ```bash
-$env:GEMINI_API_KEY="your_key_here"  # PowerShell
+$env:GROQ_API_KEY="your_key_here"  # PowerShell
 # OR
-export GEMINI_API_KEY="your_key_here"  # Bash
+export GROQ_API_KEY="your_key_here"  # Bash
 ```
 
 ### 3. Run Backend
@@ -73,7 +73,7 @@ See [QUICK-DEPLOY.md](QUICK-DEPLOY.md) for 5-minute deployment guide.
 **TL;DR:**
 1. Create 2 HF Spaces (one Docker for backend, one Streamlit for frontend)
 2. Upload files
-3. Set `GEMINI_API_KEY` secret on backend
+3. Set `GROQ_API_KEY` secret on backend
 4. Set `BACKEND_URL` variable on frontend
 5. Done! 🎉
 
@@ -139,7 +139,7 @@ The dashboard has **6 main pages** (select from sidebar):
 - **🌍 International Details:** Countries called, durations, call history
 - **🌐 Internet Usage:** Download/Upload with pie chart
 - **💬 SMS Activity:** Message count and frequency level
-- **🤖 AI-Powered Recommendations:** Personalized package suggestions from Gemini with usage badges
+- **🤖 AI-Powered Recommendations:** Personalized package suggestions from Groq with usage badges
 
 **Example:** Enter ID 100 → See their complete profile + structured AI recommendation
 
@@ -206,7 +206,7 @@ The dashboard has **6 main pages** (select from sidebar):
 **How to use:**
 1. Type your question
 2. Click **"🔍 Ask AI"**
-3. Get intelligent answer from Gemini
+3. Get intelligent answer from Groq
 
 **Example questions:**
 - "What time of day has the most calls?"
@@ -237,7 +237,7 @@ The dashboard has **6 main pages** (select from sidebar):
 **Backend:**
 - FastAPI
 - scikit-learn (KMeans, DBSCAN)
-- Google Gemini AI
+- Groq AI (llama-3.3-70b-versatile)
 - HuggingFace Transformers
 - FAISS (semantic search)
 - SQLite
@@ -262,7 +262,7 @@ The dashboard has **6 main pages** (select from sidebar):
 | `/api/customers/{id}` | GET | Customer details |
 | `/api/time-analysis` | GET | Time-based call analysis |
 | `/api/clusters` | GET | Cluster information |
-| `/api/query` | POST | AI query (Gemini) |
+| `/api/query` | POST | AI query (Groq) |
 | `/api/search` | GET | Semantic search |
 | `/api/cluster/run` | POST | On-demand clustering |
 | `/api/visualizations/*` | GET | Dynamic charts |
@@ -284,7 +284,7 @@ Built for advanced telecom customer analytics.
 **Backend not responding?**
 - Check if port 7860 is free
 - Ensure data files are in backend directory
-- Verify GEMINI_API_KEY is set
+- Verify GROQ_API_KEY is set
 
 **Frontend can't connect?**
 - Check BACKEND_URL is correct

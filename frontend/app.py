@@ -524,7 +524,7 @@ Provide response in this format:
                     # Check for errors first
                     if response and 'error' in response:
                         st.error(f"❌ {response['error']}")
-                        st.info("💡 Please check your backend connection and Gemini API key configuration.")
+                        st.info("💡 Please check your backend connection and Groq API key configuration.")
                     elif response and 'answer' in response:
                         # Beautiful formatted output
                         st.markdown("""

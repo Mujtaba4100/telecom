@@ -37,8 +37,8 @@ telecom-backend/         (Your HF Space root)
 1. In your HF Space, click **Settings** (⚙️)
 2. Go to **Repository secrets**
 3. Click **New secret**
-4. Name: `GEMINI_API_KEY`
-5. Value: `AIzaSyAMnF1TlsgVwuk_4ozncUf6tIMBqN-Ll_s` (your actual key)
+4. Name: `GROQ_API_KEY`
+5. Value: Your Groq API key from https://console.groq.com
 6. Click **Save**
 
 ### How to Upload
@@ -131,7 +131,7 @@ git push
 - [ ] SDK = **Docker** (not Streamlit!)
 - [ ] Uploaded: app.py, requirements.txt, Dockerfile
 - [ ] Uploaded: 3 CSV files
-- [ ] Secret: `GEMINI_API_KEY` = your API key
+- [ ] Secret: `GROQ_API_KEY` = your API key
 - [ ] Wait for build (5-10 mins)
 
 ### Frontend ✓
@@ -153,7 +153,7 @@ git push
 
 **"API not responding"**
 - Wait 5-10 minutes for Docker build
-- Check if `GEMINI_API_KEY` secret is set
+- Check if `GROQ_API_KEY` secret is set
 - Click on your space URL to see if it loads
 
 ### Frontend Issues
@@ -196,7 +196,7 @@ Opens directly to the dashboard!
 **Everything is FREE!** ✅
 - HuggingFace Spaces: FREE
 - CPU basic hardware: FREE
-- Gemini API: FREE (60 req/min)
+- Groq API: FREE (30 req/min on free tier)
 
 ---
 
