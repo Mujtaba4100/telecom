@@ -765,7 +765,7 @@ def render_ai_chat():
     # Display history
     if st.session_state.chat_history:
         st.markdown("---")
-        for chat in reversed(st.session_state.chat_history[-5:]):
+        for chat in reversed(st.session_state.chat_history[-10:]):
             st.markdown(f"**You:** {chat['question']}")
             st.info(f"**AI:** {chat['answer']}")
             st.markdown("---")
