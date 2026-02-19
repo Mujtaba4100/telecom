@@ -501,13 +501,17 @@ def render_customer_lookup():
                 st.markdown("### 🤖 AI-Powered Recommendations")
                 
                 with st.spinner("🔮 Analyzing customer profile and generating personalized recommendations..."):
-                    # Build context for LLM
+                    # Build context for LLM with full time distribution
+                    morning_pct = time_dist.get('Morning', 0) / sum(time_dist.values()) * 100 if sum(time_dist.values()) > 0 else 0
+                    evening_pct = time_dist.get('Evening', 0) / sum(time_dist.values()) * 100 if sum(time_dist.values()) > 0 else 0
+                    night_pct = time_dist.get('Night', 0) / sum(time_dist.values()) * 100 if sum(time_dist.values()) > 0 else 0
+                    
                     context = f"""
 Analyze this customer and provide a structured package recommendation with these sections:
 
 Customer Profile:
 - Voice: {comm['voice_total_calls']:.0f} calls, {comm['voice_total_duration_mins']:.1f} mins
-- Peak time: {max(time_dist, key=time_dist.get)}
+- Time Distribution: Morning {morning_pct:.1f}%, Evening {evening_pct:.1f}%, Night {night_pct:.1f}%
 - Data: {internet['total_mb']:.0f} MB (Download: {internet['download_pct']:.0f}%, Upload: {internet['upload_pct']:.0f}%)
 - SMS: {sms['total_messages']} messages
 - International: {'Yes' if intl['is_international_user'] else 'No'}

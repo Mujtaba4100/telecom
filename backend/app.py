@@ -679,15 +679,38 @@ CUSTOMER DATABASE STATISTICS:
 
 USER QUESTION: {request.question}
 
-INSTRUCTIONS: 
-- If asked for package recommendations, provide structured response with:
-  1. USAGE PROFILE (analyze their patterns)
-  2. RECOMMENDED PACKAGE (specific details)
-  3. KEY BENEFITS (3-4 points)
-  4. PRICING STRATEGY (upsell/retention approach)
+CRITICAL INSTRUCTIONS: 
+- If asked for package recommendations, you MUST provide ALL 4 sections in this exact format:
+
+**1. USAGE PROFILE**
+[Analyze customer patterns with specific numbers]
+- Intelligently identify usage patterns from the time distribution percentages
+- Mention ALL significant time periods (generally >25% is significant)
+- Recognize patterns: bimodal (2 peaks), uniform (balanced), concentrated (1 dominant)
+- Consider work patterns: morning+night = commuter, night-heavy = night owl, etc.
+
+**2. RECOMMENDED PACKAGE**
+[Specific package details with pricing]
+- Size the package to cover 120-150% of their actual usage for growth headroom
+- EXCLUDE services with 0 usage (if data=0 MB, don't include data)
+- Name should reflect the dominant pattern intelligently
+- Be realistic with pricing ($15-50/month range typical)
+
+**3. KEY BENEFITS**
+[List 3-4 specific benefits with bullet points]
+- Focus on: cost savings, usage coverage, flexibility, value match
+- Quantify benefits where possible ("save 20%", "covers 150% of usage")
+- Address their specific pain points
+
+**4. PRICING STRATEGY**
+[Upsell/retention approach with revenue impact]
+- Suggest specific discounts with business justification
+- Include upsell opportunities for underutilized services
+- Quantify expected impact (ARPU increase, churn reduction)
+
 - Use data-driven insights from statistics above
 - Be specific with numbers and percentages
-- Keep response concise but actionable
+- Include all 4 sections - DO NOT skip any
 """
     
     try:
