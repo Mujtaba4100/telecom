@@ -1,5 +1,23 @@
 # 🎓 Complete Code Walkthrough for Demo
-*Master guide for presenting Backend, Frontend, and UI*
+*Master guide for presenting Backend, Frontend, and UI - Updated for v2.0*
+
+---
+
+## ✨ What's New in v2.0
+
+### **New Features:**
+1. 🔄 **Cohort Comparison Page** - Side-by-side segment analysis with delta highlighting
+2. 📥 **Export/Download** - CSV reports and PNG chart exports on all pages
+3. 💡 **AI Insights Panels** - Context-aware recommendations on every view
+4. 📊 **Enhanced SMS Analytics** - Active user metrics (1.9% adoption, 2.0 avg msgs)
+5. ⚠️ **Better Error Handling** - Graceful fallbacks for AI timeouts
+
+### **Improvements:**
+- Tab-specific AI contexts (no cross-contamination)
+- Visual delta indicators (⚠️ >50%, ⚡ 20-50%, ✓ <20%)
+- 60-second AI timeout (up from 30s)
+- Structured AI recommendations with usage badges
+- Low SMS adoption warnings
 
 ---
 
@@ -10,9 +28,9 @@
 │   Frontend      │   HTTP  │    Backend       │  Query  │   External      │
 │   (Streamlit)   │ ◄─────► │    (FastAPI)     │ ◄─────► │   Services      │
 │                 │         │                  │         │                 │
-│  - 5 Pages      │         │  - 8+ Endpoints  │         │  - Gemini LLM   │
+│  - 6 Pages      │         │  - 8+ Endpoints  │         │  - Gemini LLM   │
 │  - Plotly viz   │         │  - SQLite DB     │         │  - HuggingFace  │
-│  - User Input   │         │  - FAISS Search  │         │    Embeddings   │
+│  - Export/AI    │         │  - FAISS Search  │         │    Embeddings   │
 └─────────────────┘         └──────────────────┘         └─────────────────┘
 ```
 
@@ -331,7 +349,83 @@ except:
 
 ---
 
-### **2. Five Pages**
+### **2. New Features (Added in v2.0)**
+
+#### **A. Export/Download Functionality**
+
+**Purpose:** Allow users to save data and visualizations for external analysis
+
+**Implementation:**
+```python
+def export_to_csv(data, filename="export.csv"):
+    """Convert data to CSV for download"""
+    if isinstance(data, dict):
+        df = pd.DataFrame([data])
+    return df.to_csv(index=False).encode('utf-8')
+
+def export_chart_to_image(fig):
+    """Convert Plotly figure to PNG bytes"""
+    return fig.to_image(format="png", width=1200, height=600)
+
+def create_export_buttons(data=None, chart=None, prefix="report"):
+    """Create standardized export buttons"""
+    st.download_button(
+        label="📥 Export CSV",
+        data=csv_data,
+        file_name=f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    )
+```
+
+**Where it appears:**
+- Overview Dashboard (all tabs)
+- Cohort Comparison (summary table + chart)
+- Visual Insights (all charts)
+- Clustering Analysis (cluster data)
+
+**Demo tip:** "Users can download reports as CSV for Excel analysis or save charts as PNG for presentations"
+
+---
+
+#### **B. AI Insights Panels**
+
+**Purpose:** Provide context-aware recommendations on every page
+
+**Implementation:**
+```python
+def show_ai_insights(context, view_name="current view"):
+    """Display AI-generated insights for current view"""
+    with st.expander("💡 AI Insights & Recommendations", expanded=False):
+        prompt = f"Based on {view_name}, provide 3 actionable insights..."
+        response = query_ai(prompt)
+        st.info(response['answer'])
+```
+
+**Context provided to Gemini:**
+1. **Communication Tab:** Voice stats, time distribution, international details
+2. **Internet Tab:** Data volume, upload/download ratios, heavy users
+3. **SMS Tab:** Message volume, adoption rate (1.9%), active user average (2.0)
+4. **Cohort Comparison:** Segment sizes, usage differences, percentage deltas
+5. **Clustering:** Cluster distribution, value assessment, movement opportunities
+
+**Features:**
+- ✅ Tab-specific contexts (no cross-contamination)
+- ✅ 60-second timeout with error handling
+- ✅ Structured output format (3 insights + actions)
+- ✅ Expandable panels (don't clutter UI)
+
+**Error handling:**
+```python
+except requests.exceptions.Timeout:
+    return {"error": "AI service is taking longer than expected"}
+except requests.exceptions.ConnectionError:
+    return {"error": "Cannot connect to AI service"}
+```
+
+**Demo tip:** "AI analyzes the current view's data and provides strategic recommendations - it's like having a data analyst on every page"
+
+---
+
+### **3. Six Pages**
 
 #### **Page 1: 📊 Overview Dashboard** (Lines 50-180)
 
@@ -347,21 +441,27 @@ def render_overview():
 
 **Demo walkthrough:**
 1. **Header:** Shows total customers (266,322)
-2. **Communication Tab:**
+2. **Export Buttons:** Download CSV report and save charts as PNG
+3. **Communication Tab:**
    - Total calls: 105.8M
-   - Total minutes: 29.7M
-   - Avg calls/customer: 397
+   - Total minutes: 2.2M
+   - Avg calls/customer: 8.4 mins
    - International users: 16,133 (6.06%)
    - Chart: Morning vs Evening vs Night call distribution
-3. **Internet Tab:**
-   - Total data: 91.2 GB
-   - Upload: 18.2 GB
-   - Download: 73.0 GB
-   - Chart: Time-based data usage patterns
-4. **SMS Tab:**
-   - Total SMS: 45.2M
-   - Avg SMS/customer: 169.7
-   - Chart: SMS frequency by time
+   - 💡 AI Insights: Expand panel for voice calling recommendations
+4. **Internet Tab:**
+   - Total data: 105.9 GB
+   - Upload: 98.7 GB
+   - Download: 7.2 GB
+   - Chart: Upload vs Download breakdown
+   - 💡 AI Insights: Expand panel for data package recommendations
+5. **SMS Tab:**
+   - Total SMS: 10,311
+   - Active users: 5,157 (1.9% adoption rate)
+   - Avg per active user: 2.0 messages
+   - ⚠️ Low SMS adoption warning (suggests WhatsApp dominance)
+   - Chart: SMS frequency distribution among active users
+   - 💡 AI Insights: Expand panel for SMS strategy recommendations
 
 **Code highlight:**
 ```python
@@ -372,12 +472,47 @@ col2.metric("Total Minutes", f"{total_mins:,.1f}M")
 
 ---
 
-#### **Page 2: 🔍 Customer Lookup** (Lines 182-320)
+#### **Page 2: � Customer Lookup** (Lines 182-320)
 
 ```python
 def render_customer_lookup():
-    # Input: Subscriber ID text box
+    # Input: Subscriber ID number box
     # Fetches: /api/customers/{id}
+    # Displays 4 expandable sections + AI recommendations
+```
+
+**Demo steps:**
+1. **Enter ID** (e.g., 100, 1000, 50000)
+2. **Click Search**
+
+**Sections displayed:**
+1. **Section 1 - Communication:**
+   Total calls: 523
+   Total duration: 412.5 mins
+   Time breakdown: Morning 45%, Evening 38%, Night 17%
+
+2. **Section 2 - International:**
+   Countries: USA, UK, Canada
+   Total intl calls: 23
+   Total duration: 56.2 mins
+
+3. **Section 3 - Internet:**
+   Download: 2,278 MB
+   Upload: 445 MB
+   Pie chart: 84% download, 16% upload
+
+4. **Section 4 - SMS:**
+   Total SMS: 0 (or low count)
+   Frequency: Low
+
+5. **AI-Powered Recommendations:**
+   - Usage profile badges: 📞 Voice: Moderate, 📊 Data: High, 💬 SMS: Low, 🌍 International
+   - Structured recommendation with 4 sections:
+     * Usage Profile Analysis
+     * Recommended Package (highlighted)
+     * Key Benefits
+     * Pricing Strategy
+   - Fallback error handling if Gemini API unavailable
     # Displays: 4 expandable sections
     #   1. Communication Details
     #   2. International Activity
@@ -425,7 +560,72 @@ with st.expander("📞 Communication Details", expanded=True):
 
 ---
 
-#### **Page 3: 📈 Visual Insights** (Lines 322-420)
+---
+
+#### **Page 3: 🔄 Cohort Comparison** (NEW - Lines 800-920)
+
+```python
+def render_cohort_comparison():
+    # Compare two customer segments side-by-side
+    # Process:
+    #   1. Select Cohort A (e.g., Cluster 0)
+    #   2. Select Cohort B (e.g., Cluster 2)
+    #   3. Display comparison metrics with percentage deltas
+    #   4. Visual indicators for significance
+    #   5. Export comparison data
+```
+
+**Demo walkthrough:**
+1. **Select Cohorts:**
+   - Cohort A: Cluster 0 (189,569 customers - 71%)
+   - Cohort B: Cluster 2 (27,370 customers - 10%)
+
+2. **Comparison Display:**
+   - **Voice Usage:** 3.0 mins vs 0.9 mins (-69.1%) ⚡
+   - **Data Usage:** 182.9 MB vs 2617.4 MB (+1330.8%) ⚠️
+   - **SMS Count:** 0.0 vs 0.0 msgs (-82.7%) ⚡
+
+3. **Visual Indicators:**
+   - ⚠️ Red: >50% difference (major behavioral gap)
+   - ⚡ Orange: 20-50% difference (significant difference)
+   - ✓ Green: <20% difference (similar behavior)
+
+4. **Summary Table:**
+   - All metrics in tabular format
+   - Export button for CSV download
+
+5. **Visual Bar Chart:**
+   - Side-by-side comparison
+   - Export button for PNG download
+
+6. **AI Insights Panel:**
+   - Strategic recommendations for each segment
+   - Upsell opportunities
+   - Retention strategies
+
+**Code highlight:**
+```python
+# Calculate percentage difference
+delta_pct = ((val_b - val_a) / val_a) * 100
+
+# Visual indicator
+if abs(delta_pct) > 50:
+    st.markdown("⚠️ {:.0f}%".format(abs(delta_pct)))
+elif abs(delta_pct) > 20:
+    st.markdown("⚡ {:.0f}%".format(abs(delta_pct)))
+else:
+    st.markdown("✓ {:.0f}%".format(abs(delta_pct)))
+```
+
+**Business Value:**
+- Identify high-value vs low-value segments
+- Target upsell opportunities
+- Design segment-specific packages
+- Example: Cluster 2 uses 14x more data → Unlimited data plans!
+
+---
+
+#### **Page 4: 📈 Visual Insights** (Lines 322-420)
 
 ```python
 def render_visualizations():
@@ -461,7 +661,7 @@ if chart_type == "scatter":
 
 ---
 
-#### **Page 4: 🎯 Clustering Analysis** (Lines 422-520)
+#### **Page 5: 🎯 Clustering Analysis** (Lines 422-520)
 
 ```python
 def render_clustering():
@@ -500,7 +700,7 @@ if clustering_mode == "Run New Clustering":
 
 ---
 
-#### **Page 5: 🤖 AI Assistant** (Lines 522-605)
+#### **Page 6: 🤖 AI Assistant** (Lines 522-605)
 
 ```python
 def render_ai_assistant():
@@ -562,32 +762,43 @@ Open: https://Hamza4100-telecom.hf.space/api/customers/SUB123456
 Show: Complete customer profile in JSON
 ```
 
-### **3. Frontend UI Demo (8 mins)**
+### **3. Frontend UI Demo (10 mins)**
 
 **Page 1 - Overview (2 mins):**
 - Open dashboard
 - Show 266K customers metric
 - Click through 3 tabs (Communication, Internet, SMS)
 - Highlight time breakdown charts
+- Expand AI Insights panel on Communication tab
+- Click Export CSV button to show download
 
 **Page 2 - Customer Lookup (2 mins):**
-- Enter subscriber ID
+- Enter subscriber ID (e.g., 100)
 - Expand all 4 sections
-- Click "Get AI Recommendations"
-- Show Gemini's personalized suggestions
+- Scroll to AI-Powered Recommendations
+- Show usage badges and structured recommendation
+- Mention error handling if Gemini is down
 
-**Page 3 - Visual Insights (2 mins):**
-- Create scatter plot: Voice vs Data
-- Color by cluster
-- Zoom into interesting patterns
-- Switch to histogram showing data distribution
+**Page 3 - Cohort Comparison (2 mins):**
+- Select Cluster 0 vs Cluster 2
+- Point out 1330% data usage difference
+- Explain visual indicators (⚠️ ⚡ ✓)
+- Show summary table
+- Export comparison CSV
+- Expand AI Insights for strategic recommendations
 
-**Page 4 - Clustering (1 min):**
+**Page 4 - Visual Insights (1 min):**
+- Create scatter plot or select pre-built viz
+- Show interactive features (hover, zoom)
+- Export chart as PNG
+
+**Page 5 - Clustering (2 mins):**
 - View existing 6 clusters
 - Show cluster statistics table
+- Expand AI Insights for cluster analysis
 - Mention: "We can run new clustering on demand"
 
-**Page 5 - AI Assistant (1 min):**
+**Page 6 - AI Assistant (1 min):**
 - Ask: "Which cluster uses the most data?"
 - Show Gemini's detailed analysis
 - Ask follow-up: "What's the business opportunity here?"

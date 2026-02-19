@@ -24,9 +24,12 @@ Complete AI-powered customer analytics platform with clustering, visualizations,
 - 💡 Personalized package recommendations
 
 ### ✅ Advanced Analytics
-- 📊 KMeans & DBSCAN clustering
+- 📊 KMeans & DBSCAN clustering (6 clusters)
 - 🎨 Interactive visualizations (Plotly)
 - 🔬 On-demand clustering analysis
+- 🔄 Cohort comparison with delta highlighting
+- 📥 Export CSV reports and PNG charts
+- 💡 AI insights panels on every view
 
 ---
 
@@ -103,7 +106,7 @@ talhabhai/
 
 ### 📑 Sidebar Navigation
 
-The dashboard has **5 main pages** (select from sidebar):
+The dashboard has **6 main pages** (select from sidebar):
 
 ---
 
@@ -114,11 +117,12 @@ The dashboard has **5 main pages** (select from sidebar):
 **What you see:**
 - **Top metrics:** Total customers, international users, avg calls/data/SMS
 - **Three tabs:**
-  - **📞 Communication:** Voice stats, time-of-day breakdown (Morning/Evening/Night), pie chart
-  - **🌐 Internet:** Download/Upload breakdown, usage stats, pie chart
-  - **💬 SMS:** Total messages, frequency distribution, bar chart
+  - **📞 Communication:** Voice stats, time-of-day breakdown (Morning/Evening/Night), pie chart + AI insights
+  - **🌐 Internet:** Download/Upload breakdown, usage stats, pie chart + AI insights
+  - **💬 SMS:** Total messages, frequency distribution, adoption rate (1.9%), active user avg (2.0 msgs) + AI insights
+- **Export buttons:** Download CSV reports and save charts as PNG
 
-**How to use:** Just scroll and explore - everything updates automatically!
+**How to use:** Just scroll and explore - everything updates automatically! Expand AI Insights for recommendations.
 
 ---
 
@@ -127,21 +131,42 @@ The dashboard has **5 main pages** (select from sidebar):
 **Purpose:** Search for ONE specific customer by ID
 
 **How to use:**
-1. Enter **Subscriber ID** (e.g., 864226)
+1. Enter **Subscriber ID** (e.g., 1, 100, 1000)
 2. Click **"🔎 Search Customer"**
 
-**What you get:**
-- **📞 Communication Analysis:** Calls, duration, time breakdown
+**What you get (4 expandable sections):**
+- **📞 Communication Analysis:** Calls, duration, time breakdown (Morning/Evening/Night)
 - **🌍 International Details:** Countries called, durations, call history
 - **🌐 Internet Usage:** Download/Upload with pie chart
 - **💬 SMS Activity:** Message count and frequency level
-- **🤖 AI Suggestions:** Personalized package recommendations from Gemini
+- **🤖 AI-Powered Recommendations:** Personalized package suggestions from Gemini with usage badges
 
-**Example:** Enter ID 864226 → See their complete profile + AI recommendation
+**Example:** Enter ID 100 → See their complete profile + structured AI recommendation
 
 ---
 
-### 3️⃣ 📈 Visual Insights
+### 3️⃣ � Cohort Comparison
+
+**Purpose:** Compare two customer segments side-by-side
+
+**How to use:**
+1. Select **Cohort A** (e.g., Cluster 0)
+2. Select **Cohort B** (e.g., Cluster 2)
+3. View side-by-side comparison with percentage deltas
+
+**What you get:**
+- **Comparison metrics:** Voice usage, Data usage, SMS count
+- **Visual indicators:** ⚠️ >50% difference, ⚡ 20-50% difference, ✓ <20% difference
+- **Summary table:** All metrics with percentage differences
+- **Visual chart:** Bar chart comparing both cohorts
+- **AI Insights:** Strategic recommendations for each segment
+- **Export buttons:** Download comparison CSV and chart PNG
+
+**Example:** Compare Cluster 0 (light users) vs Cluster 2 (data-heavy users) → See 1330% data usage difference!
+
+---
+
+### 4️⃣ �📈 Visual Insights
 
 **Purpose:** Generate interactive charts on-demand
 
@@ -154,7 +179,7 @@ The dashboard has **5 main pages** (select from sidebar):
 
 ---
 
-### 4️⃣ 🔬 Clustering Analysis
+### 5️⃣ 🔬 Clustering Analysis
 
 **Purpose:** Explore and create customer segments
 
@@ -174,7 +199,7 @@ The dashboard has **5 main pages** (select from sidebar):
 
 ---
 
-### 5️⃣ 💬 AI Assistant
+### 6️⃣ 💬 AI Assistant
 
 **Purpose:** Ask questions in natural language
 
@@ -199,9 +224,11 @@ The dashboard has **5 main pages** (select from sidebar):
 |----------|-------|
 | See general trends | 🏠 Overview Dashboard |
 | Check specific customer | 👤 Customer Lookup (enter ID) |
+| Compare customer segments | 🔄 Cohort Comparison |
 | Visualize patterns | 📈 Visual Insights |
 | Group similar customers | 🔬 Clustering Analysis |
 | Ask data questions | 💬 AI Assistant |
+| Export reports/charts | Any page with 📥 buttons |
 
 ---
 

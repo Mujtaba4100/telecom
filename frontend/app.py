@@ -1,7 +1,6 @@
 """
 Enhanced Telecom Customer Segmentation Dashboard
 ===============================================
-Features EVERYTHING Talha requested:
 ✅ Interactive visual insights
 ✅ Communication: Location, Intl calls, Frequency, Duration, Time (Morning/Noon/Night)
 ✅ Internet: Download, Upload, Overall
@@ -746,10 +745,15 @@ def render_ai_chat():
         if user_question:
             with st.spinner("Thinking..."):
                 response = query_ai(user_question)
-                st.session_state.chat_history.append({
-                    'question': user_question,
-                    'answer': response['answer']
-                })
+                if response and 'answer' in response:
+                    st.session_state.chat_history.append({
+                        'question': user_question,
+                        'answer': response['answer']
+                    })
+                elif response and 'error' in response:
+                    st.error(f"❌ {response['error']}")
+                else:
+                    st.warning("⚠️ Unable to get AI response. Please try again.")
     
     # Display history
     if st.session_state.chat_history:
