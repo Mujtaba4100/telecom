@@ -688,39 +688,85 @@ RESPONSE INSTRUCTIONS:
    - AND it's about an INDIVIDUAL customer (mentions specific usage numbers for one person)
 
 📌 **For all other questions** (insights, trends, analysis, comparisons):
-   - Provide 3 concise, actionable insights
-   - Focus on business opportunities, patterns, and strategies
+   - Provide 3 concise, actionable insights with clear formatting
+   - Use markdown: **bold** for emphasis, bullet points (•) for lists
+   - Include specific numbers and percentages
+   - Add visual separators between insights
    - DO NOT format as package recommendations
    - Keep it brief and data-driven
+
+FORMAT FOR INSIGHTS (use this structure):
+### 🎯 Insight 1: [Title]
+**Key Finding:** [Main point with numbers]
+**Action:** [What to do]
+
+### 📊 Insight 2: [Title]
+**Key Finding:** [Main point with numbers]
+**Action:** [What to do]
+
+### 💡 Insight 3: [Title]
+**Key Finding:** [Main point with numbers]
+**Action:** [What to do]
 
 ---
 
 IF PACKAGE RECOMMENDATION (Individual Customer Only):
 
-**1. USAGE PROFILE**
-- Intelligently identify usage patterns from time distribution percentages
-- Mention ALL significant time periods (>25% is significant)
-- Recognize patterns: bimodal (2 peaks), uniform (balanced), concentrated (1 dominant)
-- Consider work patterns: morning+night = commuter, night-heavy = night owl, etc.
+FORMAT:
+### 📋 USAGE PROFILE
+**Pattern:** [Describe time distribution pattern - bimodal/uniform/concentrated]
+**Behavior:** [Commuter/Night owl/etc based on morning+night/night-heavy patterns]
+• Mention ALL significant time periods (>25% is significant)
+• Recognize patterns clearly
 
-**2. RECOMMENDED PACKAGE**
-- Size to cover 120-150% of actual usage for growth headroom
-- EXCLUDE services with 0 usage (if data=0 MB, don't include data)
-- Name should reflect the dominant pattern intelligently
-- Realistic pricing in PKR (Pakistani Rupees): PKR 500-2500/month typical range
-  * Basic packages: PKR 500-900/month
-  * Mid-tier packages: PKR 900-1600/month
-  * Premium packages: PKR 1600-2500/month
+### 🎁 RECOMMENDED PACKAGE
+**Package Name:** [Match actual Zong package names when possible, e.g., "Super Weekly Plus", "Monthly Social"]
+**Details:** [Specific allocations matching customer usage]
+**Price:** PKR [amount]/[day|week|month]
+• EXCLUDE services with 0 usage (if data=0 MB, don't include data)
+• **ZONG PAKISTAN ACTUAL PRICING (choose appropriate validity based on usage):**
 
-**3. KEY BENEFITS**
-- Focus on: cost savings, usage coverage, flexibility, value match
-- Quantify benefits where possible ("save 20%", "covers 150% of usage")
+  📅 **DAILY Packages** (for ultra-low/occasional users):
+  - Call-only: PKR 5-17/day (~75-150 mins)
+  - Data-only: PKR 23/day (100MB basic, 2.5GB night)
+  - SMS: PKR 7/day (500 SMS + 30MB WhatsApp)
 
-**4. PRICING STRATEGY**
-- Specific discounts with business justification (in PKR)
-- Upsell opportunities for underutilized services
-- Quantify expected impact (ARPU increase, churn reduction)
-- Consider Pakistani market competition and customer affordability
+  📅 **WEEKLY Packages** (for light-moderate users):
+  - Light: PKR 120/week (500 mins + 500 SMS + 500MB) - "Haftawar Offer"
+  - Mid: PKR 290/week (Unlimited on-net + 8GB) - "Super Weekly Plus"
+  - Premium: PKR 385-600/week (30-100GB + unlimited calls) - "Super Weekly Premium", "Weekly Digital Max"
+
+  📅 **MONTHLY Packages** (for regular-heavy users):
+  - Ultra-light: PKR 50-150/month (150-500MB data only) - "Monthly Mini/Basic"
+  - Social: PKR 130-240/month (6-12GB social data)
+  - Basic: PKR 420-575/month (1-8GB + 1000-3000 mins) - "Shandaar Mahana", "Monthly Superstar"
+  - Mid: PKR 1200-1300/month (12-20GB + unlimited on-net) - "Monthly Super Card", "Monthly Supreme"
+  - Premium: PKR 1500-2000/month (50-200GB + 3000-3500 mins) - "Monthly Diamond/Platinum"
+  - Heavy: PKR 4000/month (400GB + 5000 mins) - "Monthly Titanium"
+
+• **VALIDITY SELECTION LOGIC:**
+  - Ultra-low usage (<5 calls, <50MB) → Daily packages (PKR 5-23/day)
+  - Occasional usage (<50 calls, <500MB) → Weekly packages (PKR 120-600/week)
+  - Regular usage (>50 calls OR >500MB) → Monthly packages (PKR 150-4000/month)
+
+### ✨ KEY BENEFITS
+• **Benefit 1:** [Quantified if possible - "save 20%", "covers 150% of usage"]
+• **Benefit 2:** [Cost savings, usage coverage, flexibility]
+• **Benefit 3:** [Value match for their usage pattern]
+• **Benefit 4:** [Additional value proposition]
+
+### 💰 PRICING STRATEGY
+**Discount Offer:** PKR [amount] discount/benefit
+**Business Logic:** [Why this discount - ARPU increase/churn reduction]
+**Upsell Opportunity:** [Services they could use more]
+**Expected Impact:** [Quantified business results]
+
+**SPECIAL NOTES:**
+• For ultra-low usage (<5 calls/day, <50 MB/day): Recommend DAILY packages (PKR 5-23/day)
+• For light weekly usage: Recommend WEEKLY packages (PKR 120-600/week)
+• For regular monthly usage: Recommend MONTHLY packages (PKR 150-4000/month)
+• Always calculate total cost correctly: Daily packages cost ~PKR 150-690/month (30 days), Weekly packages cost ~PKR 480-2400/month (4 weeks)
+• Match customer usage patterns to appropriate validity period!
 """
     
     try:

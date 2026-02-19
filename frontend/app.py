@@ -241,15 +241,19 @@ def show_ai_insights(context, view_name="current view"):
         with st.spinner("🔮 Analyzing data..."):
             prompt = f"""Analyze the {view_name} data and provide exactly 3 actionable business insights (NOT package recommendations).
 
-Format:
-1. [Insight title]: [Brief description with specific numbers]
-   Action: [What business action to take]
+Use this EXACT format with markdown:
 
-2. [Insight title]: [Brief description with specific numbers]
-   Action: [What business action to take]
+### 🎯 Insight 1: [Catchy Title]
+**Key Finding:** [Main point with specific numbers and percentages]
+**Action:** [Clear business action to take]
 
-3. [Insight title]: [Brief description with specific numbers]  
-   Action: [What business action to take]
+### 📊 Insight 2: [Catchy Title]
+**Key Finding:** [Main point with specific numbers and percentages]
+**Action:** [Clear business action to take]
+
+### 💡 Insight 3: [Catchy Title]
+**Key Finding:** [Main point with specific numbers and percentages]
+**Action:** [Clear business action to take]
 
 DO NOT provide package recommendations or pricing. Focus on trends, opportunities, and strategic actions.
 
@@ -257,8 +261,10 @@ Context: {context}
 """
             response = query_ai(prompt)
             if response and 'answer' in response:
-                st.markdown("**🎯 Top 3 Actionable Insights:**")
-                st.info(response['answer'])
+                st.markdown("---")
+                # Display formatted insights with better styling
+                st.markdown(response['answer'])
+                st.markdown("---")
             elif response and 'error' in response:
                 st.warning(f"⚠️ {response['error']}")
             else:
@@ -512,19 +518,53 @@ def render_customer_lookup():
                     context = f"""
 Provide a PACKAGE RECOMMENDATION for this individual customer:
 
-Customer Profile:
-- Voice: {comm['voice_total_calls']:.0f} calls, {comm['voice_total_duration_mins']:.1f} mins
-- Time Distribution: Morning {morning_pct:.1f}%, Evening {evening_pct:.1f}%, Night {night_pct:.1f}%
-- Data: {internet['total_mb']:.0f} MB (Download: {internet['download_pct']:.0f}%, Upload: {internet['upload_pct']:.0f}%)
-- SMS: {sms['total_messages']} messages
-- International: {'Yes' if intl['is_international_user'] else 'No'}
-{f"- Countries: {intl['all_countries']}" if intl['is_international_user'] else ''}
+**Customer Profile:**
+• Voice: {comm['voice_total_calls']:.0f} calls, {comm['voice_total_duration_mins']:.1f} mins
+• Time Distribution: Morning {morning_pct:.1f}%, Evening {evening_pct:.1f}%, Night {night_pct:.1f}%
+• Data: {internet['total_mb']:.0f} MB (Download: {internet['download_pct']:.0f}%, Upload: {internet['upload_pct']:.0f}%)
+• SMS: {sms['total_messages']} messages
+• International: {'Yes' if intl['is_international_user'] else 'No'}
+{f"• Countries called: {intl['all_countries']}" if intl['is_international_user'] else ''}
 
-Provide structured package recommendation in 4 sections:
-1. USAGE PROFILE (analyze their usage patterns with time distribution)
-2. RECOMMENDED PACKAGE (specific package with pricing)
-3. KEY BENEFITS (3-4 bullet points)
-4. PRICING STRATEGY (upsell/retention approach)
+Use this EXACT format with proper markdown:
+
+### 📋 USAGE PROFILE
+**Pattern:** [Describe time distribution - bimodal/uniform/concentrated]
+**Behavior:** [Customer type based on usage]
+• List all significant time periods (>25%)
+• Identify usage patterns clearly
+
+### 🎁 RECOMMENDED PACKAGE
+**Package Name:** [Creative name matching usage]
+**Details:** [Specific allocations - voice/data/SMS]
+**Price:** PKR [amount]/month
+• Size to cover 120-150% of usage
+• EXCLUDE zero-usage services
+• **ZONG PAKISTAN ACTUAL PRICING:**
+  - Daily: PKR 5-23/day (call-only/data-only/SMS for ultra-low users)
+  - Weekly Light: PKR 120-200/week (500 mins + 500MB-4GB)
+  - Weekly Mid-Premium: PKR 290-600/week (8-100GB + unlimited calls)
+  - Monthly Ultra-light: PKR 50-240/month (150MB-12GB data only)
+  - Monthly Basic: PKR 420-575/month (1-8GB + 1000-3000 mins)
+  - Monthly Mid: PKR 1200-1300/month (12-20GB + unlimited on-net)
+  - Monthly Premium: PKR 1500-2000/month (50-200GB + 3000-3500 mins)
+  - Monthly Heavy: PKR 4000/month (400GB + 5000 mins)
+  
+• Choose package validity (daily/weekly/monthly) based on usage patterns!
+
+### ✨ KEY BENEFITS
+• **[Benefit 1]:** [Quantified value proposition]
+• **[Benefit 2]:** [Cost savings or coverage details]
+• **[Benefit 3]:** [Flexibility or convenience]
+• **[Benefit 4]:** [Additional advantage]
+
+### 💰 PRICING STRATEGY
+**Discount Offer:** [Specific PKR discount]
+**Business Logic:** [Why - ARPU/churn impact]
+**Upsell Opportunity:** [Services to promote]
+**Expected Impact:** [Quantified results]
+
+**Match validity to usage: Daily packages (5-23/day) for ultra-low, Weekly (120-600/week) for light, Monthly (150-4000/month) for regular users. Use actual Zong package names when possible!**
 """
                     response = query_ai(context)
                     
@@ -603,55 +643,10 @@ Provide structured package recommendation in 4 sections:
                             
                             st.markdown("<br>", unsafe_allow_html=True)
                             
-                            # AI Response with better formatting
-                            ai_text = response['answer']
-                            
-                            # Try to parse sections (if AI follows format)
-                            sections = {
-                                'profile': '',
-                                'package': '',
-                                'benefits': '',
-                                'pricing': ''
-                            }
-                            
-                            # Simple parsing (fallback to full text if not structured)
-                            if any(keyword in ai_text.lower() for keyword in ['usage profile', 'recommended package', 'benefits', 'pricing']):
-                                # Structured response
-                                lines = ai_text.split('\n')
-                                current_section = None
-                                for line in lines:
-                                    line_lower = line.lower()
-                                    if 'usage profile' in line_lower or 'profile' in line_lower and len(line) < 50:
-                                        current_section = 'profile'
-                                    elif 'recommended package' in line_lower or 'package' in line_lower and len(line) < 50:
-                                        current_section = 'package'
-                                    elif 'benefit' in line_lower and len(line) < 50:
-                                        current_section = 'benefits'
-                                    elif 'pricing' in line_lower and len(line) < 50:
-                                        current_section = 'pricing'
-                                    elif current_section and line.strip():
-                                        sections[current_section] += line + '\n'
-                                
-                                # Display structured
-                                if sections['profile']:
-                                    st.markdown("**📋 Usage Profile Analysis**")
-                                    st.info(sections['profile'].strip())
-                                
-                                if sections['package']:
-                                    st.markdown("**🎁 Recommended Package**")
-                                    st.markdown(f'<div class="package-highlight">{sections["package"].strip()}</div>', unsafe_allow_html=True)
-                                
-                                if sections['benefits']:
-                                    st.markdown("**✨ Key Benefits**")
-                                    st.success(sections['benefits'].strip())
-                                
-                                if sections['pricing']:
-                                    st.markdown("**💰 Pricing Strategy**")
-                                    st.warning(sections['pricing'].strip())
-                            else:
-                                # Fallback: display full text nicely
-                                st.markdown("**📋 Analysis & Recommendation**")
-                                st.markdown(ai_text)
+                            # AI Response with markdown formatting
+                            st.markdown("---")
+                            st.markdown(response['answer'])
+                            st.markdown("---")
                             
                             st.markdown('</div>', unsafe_allow_html=True)
                     else:
@@ -931,31 +926,31 @@ def render_cohort_comparison():
     sms_diff = ((sms_b - sms_a) / sms_a * 100) if sms_a > 0 else 0
     
     context = f"""
-COHORT COMPARISON ANALYSIS (aggregate segment data for {cluster_a['size']:,} + {cluster_b['size']:,} customers):
+COHORT COMPARISON - Comparing Cluster {cohort_a} vs Cluster {cohort_b}
 
-Segment Sizes:
-- Cluster {cohort_a}: {cluster_a['size']:,} customers
-- Cluster {cohort_b}: {cluster_b['size']:,} customers
+**Segment Sizes:**
+• Cluster {cohort_a}: {cluster_a['size']:,} customers
+• Cluster {cohort_b}: {cluster_b['size']:,} customers
 
-Voice Usage Comparison:
-- Cluster {cohort_a}: {voice_a:.1f} mins/customer
-- Cluster {cohort_b}: {voice_b:.1f} mins/customer
-- Difference: {voice_diff:+.1f}%
+**Voice Usage:**
+• Cluster {cohort_a}: {voice_a:.1f} mins/customer
+• Cluster {cohort_b}: {voice_b:.1f} mins/customer
+• Difference: {voice_diff:+.1f}%
 
-Data Usage Comparison:
-- Cluster {cohort_a}: {data_a:.1f} MB/customer
-- Cluster {cohort_b}: {data_b:.1f} MB/customer
-- Difference: {data_diff:+.1f}%
+**Data Usage:**
+• Cluster {cohort_a}: {data_a:.1f} MB/customer
+• Cluster {cohort_b}: {data_b:.1f} MB/customer
+• Difference: {data_diff:+.1f}%
 
-SMS Usage Comparison:
-- Cluster {cohort_a}: {sms_a:.1f} messages/customer
-- Cluster {cohort_b}: {sms_b:.1f} messages/customer
-- Difference: {sms_diff:+.1f}%
+**SMS Usage:**
+• Cluster {cohort_a}: {sms_a:.1f} messages/customer
+• Cluster {cohort_b}: {sms_b:.1f} messages/customer
+• Difference: {sms_diff:+.1f}%
 
-Provide 3 strategic insights about these segments (NOT individual package recommendations):
-1. Key behavioral differences and what they indicate
-2. Which segment is more valuable and growth potential
-3. High-level targeting strategies or campaign ideas for each segment
+Provide 3 strategic insights mentioning SPECIFIC CLUSTER numbers ({cohort_a} and {cohort_b}):
+1. Key behavioral differences between Cluster {cohort_a} and Cluster {cohort_b}
+2. Which cluster is more valuable and has better growth potential
+3. Specific targeting strategies for each cluster
 """
     show_ai_insights(context, "cohort comparison")
 
@@ -1210,27 +1205,29 @@ Provide 3 insights specifically about SMS USAGE patterns, why SMS might be low/h
                 df_clusters = pd.DataFrame(clusters_data['clusters'])
                 total_customers = df_clusters['size'].sum()
                 
+                # Build detailed cluster breakdown
+                cluster_details = []
+                for _, row in df_clusters.iterrows():
+                    cluster_details.append(f"""
+**Cluster {row['cluster_id']}:** {row['size']:,} customers ({row['size']/total_customers*100:.1f}%)
+  • Voice: {row['avg_voice_mins']:.1f} mins | Data: {row['avg_data_mb']:.1f} MB | SMS: {row['avg_sms']:.1f} msg""")
+                
                 context = f"""
-CLUSTERING PATTERN ANALYSIS (aggregate data for {total_customers:,} customers across {len(df_clusters)} clusters):
+CLUSTERING PATTERN ANALYSIS - {total_customers:,} customers across {len(df_clusters)} clusters
 
-Cluster Overview:
-- Total clusters: {len(df_clusters)}
-- Total customers analyzed: {total_customers:,}
-- Largest cluster: {df_clusters['size'].max():,} customers ({df_clusters['size'].max()/total_customers*100:.1f}%)
-- Smallest cluster: {df_clusters['size'].min():,} customers ({df_clusters['size'].min()/total_customers*100:.1f}%)
+📊 **Cluster Breakdown:**
+{chr(10).join(cluster_details)}
 
-Usage Pattern Across Clusters:
-- Average voice usage: {df_clusters['avg_voice_mins'].mean():.1f} mins (range: {df_clusters['avg_voice_mins'].min():.1f} - {df_clusters['avg_voice_mins'].max():.1f})
-- Average data usage: {df_clusters['avg_data_mb'].mean():.1f} MB (range: {df_clusters['avg_data_mb'].min():.1f} - {df_clusters['avg_data_mb'].max():.1f})
-- Average SMS: {df_clusters['avg_sms'].mean():.1f} messages (range: {df_clusters['avg_sms'].min():.1f} - {df_clusters['avg_sms'].max():.1f})
+**Overall Statistics:**
+• Largest cluster: {df_clusters['size'].max():,} customers ({df_clusters['size'].max()/total_customers*100:.1f}%)
+• Smallest cluster: {df_clusters['size'].min():,} customers ({df_clusters['size'].min()/total_customers*100:.1f}%)
+• Average voice usage range: {df_clusters['avg_voice_mins'].min():.1f} - {df_clusters['avg_voice_mins'].max():.1f} mins
+• Average data usage range: {df_clusters['avg_data_mb'].min():.1f} - {df_clusters['avg_data_mb'].max():.1f} MB
 
-Cluster Distribution:
-{chr(10).join([f'- Cluster {row["cluster_id"]}: {row["size"]:,} customers ({row["size"]/total_customers*100:.1f}%)' for _, row in df_clusters.iterrows()])}
-
-Provide 3 strategic insights (NOT package recommendations):
-1. Which cluster represents the highest-value customers and why
-2. Which cluster shows risk of churn or underutilization
-3. High-level strategies to improve customer value across clusters
+Provide 3 strategic insights referencing SPECIFIC CLUSTER IDs:
+1. Which specific cluster (by number) represents highest-value customers and why
+2. Which specific cluster shows risk and needs attention
+3. Actionable strategies mentioning specific cluster IDs to target
 """
                 show_ai_insights(context, "clustering analysis")
         
