@@ -17,7 +17,7 @@ huggingface_hub==0.20.3
 faiss-cpu==1.7.4
 
 # LLM
-groq==0.11.0
+groq>=0.12.0
 
 # Database
 aiosqlite==0.19.0

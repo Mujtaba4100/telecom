@@ -647,7 +647,9 @@ def query_with_llm(request: QueryRequest):
         return 0
     
     context = f"""
-You are a telecom analytics AI assistant analyzing customer data. Provide clear, actionable insights.
+You are a telecom analytics AI assistant analyzing Pakistani telecom customer data. Provide clear, actionable insights.
+
+IMPORTANT: This is Pakistani telecom data. Use PKR (Pakistani Rupees) for all pricing. Market context: Pakistan has competitive telecom pricing with packages ranging PKR 500-2500/month.
 
 CUSTOMER DATABASE STATISTICS:
 
@@ -679,38 +681,46 @@ CUSTOMER DATABASE STATISTICS:
 
 USER QUESTION: {request.question}
 
-CRITICAL INSTRUCTIONS: 
-- If asked for package recommendations, you MUST provide ALL 4 sections in this exact format:
+RESPONSE INSTRUCTIONS:
+
+📌 **ONLY use the 4-section package format below if:**
+   - The question explicitly contains "package", "recommend", "plan", "pricing", or "offer"
+   - AND it's about an INDIVIDUAL customer (mentions specific usage numbers for one person)
+
+📌 **For all other questions** (insights, trends, analysis, comparisons):
+   - Provide 3 concise, actionable insights
+   - Focus on business opportunities, patterns, and strategies
+   - DO NOT format as package recommendations
+   - Keep it brief and data-driven
+
+---
+
+IF PACKAGE RECOMMENDATION (Individual Customer Only):
 
 **1. USAGE PROFILE**
-[Analyze customer patterns with specific numbers]
-- Intelligently identify usage patterns from the time distribution percentages
-- Mention ALL significant time periods (generally >25% is significant)
+- Intelligently identify usage patterns from time distribution percentages
+- Mention ALL significant time periods (>25% is significant)
 - Recognize patterns: bimodal (2 peaks), uniform (balanced), concentrated (1 dominant)
 - Consider work patterns: morning+night = commuter, night-heavy = night owl, etc.
 
 **2. RECOMMENDED PACKAGE**
-[Specific package details with pricing]
-- Size the package to cover 120-150% of their actual usage for growth headroom
+- Size to cover 120-150% of actual usage for growth headroom
 - EXCLUDE services with 0 usage (if data=0 MB, don't include data)
 - Name should reflect the dominant pattern intelligently
-- Be realistic with pricing ($15-50/month range typical)
+- Realistic pricing in PKR (Pakistani Rupees): PKR 500-2500/month typical range
+  * Basic packages: PKR 500-900/month
+  * Mid-tier packages: PKR 900-1600/month
+  * Premium packages: PKR 1600-2500/month
 
 **3. KEY BENEFITS**
-[List 3-4 specific benefits with bullet points]
 - Focus on: cost savings, usage coverage, flexibility, value match
 - Quantify benefits where possible ("save 20%", "covers 150% of usage")
-- Address their specific pain points
 
 **4. PRICING STRATEGY**
-[Upsell/retention approach with revenue impact]
-- Suggest specific discounts with business justification
-- Include upsell opportunities for underutilized services
+- Specific discounts with business justification (in PKR)
+- Upsell opportunities for underutilized services
 - Quantify expected impact (ARPU increase, churn reduction)
-
-- Use data-driven insights from statistics above
-- Be specific with numbers and percentages
-- Include all 4 sections - DO NOT skip any
+- Consider Pakistani market competition and customer affordability
 """
     
     try:

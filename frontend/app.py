@@ -239,16 +239,19 @@ def show_ai_insights(context, view_name="current view"):
     """Display AI-generated insights for current view"""
     with st.expander("💡 AI Insights & Recommendations", expanded=False):
         with st.spinner("🔮 Analyzing data..."):
-            prompt = f"""Based on the {view_name} data, provide exactly 3 actionable insights in this format:
+            prompt = f"""Analyze the {view_name} data and provide exactly 3 actionable business insights (NOT package recommendations).
 
-1. [Insight title]: [Brief description]
-   Action: [What to do]
+Format:
+1. [Insight title]: [Brief description with specific numbers]
+   Action: [What business action to take]
 
-2. [Insight title]: [Brief description]
-   Action: [What to do]
+2. [Insight title]: [Brief description with specific numbers]
+   Action: [What business action to take]
 
-3. [Insight title]: [Brief description]  
-   Action: [What to do]
+3. [Insight title]: [Brief description with specific numbers]  
+   Action: [What business action to take]
+
+DO NOT provide package recommendations or pricing. Focus on trends, opportunities, and strategic actions.
 
 Context: {context}
 """
@@ -507,7 +510,7 @@ def render_customer_lookup():
                     night_pct = time_dist.get('Night', 0) / sum(time_dist.values()) * 100 if sum(time_dist.values()) > 0 else 0
                     
                     context = f"""
-Analyze this customer and provide a structured package recommendation with these sections:
+Provide a PACKAGE RECOMMENDATION for this individual customer:
 
 Customer Profile:
 - Voice: {comm['voice_total_calls']:.0f} calls, {comm['voice_total_duration_mins']:.1f} mins
@@ -517,11 +520,11 @@ Customer Profile:
 - International: {'Yes' if intl['is_international_user'] else 'No'}
 {f"- Countries: {intl['all_countries']}" if intl['is_international_user'] else ''}
 
-Provide response in this format:
-1. USAGE PROFILE (2-3 sentences analyzing their usage patterns)
-2. RECOMMENDED PACKAGE (specific package details with data/voice/SMS amounts)
-3. KEY BENEFITS (3-4 bullet points why this package fits)
-4. PRICING STRATEGY (upsell/retention suggestion)
+Provide structured package recommendation in 4 sections:
+1. USAGE PROFILE (analyze their usage patterns with time distribution)
+2. RECOMMENDED PACKAGE (specific package with pricing)
+3. KEY BENEFITS (3-4 bullet points)
+4. PRICING STRATEGY (upsell/retention approach)
 """
                     response = query_ai(context)
                     
@@ -928,7 +931,7 @@ def render_cohort_comparison():
     sms_diff = ((sms_b - sms_a) / sms_a * 100) if sms_a > 0 else 0
     
     context = f"""
-COHORT COMPARISON ANALYSIS:
+COHORT COMPARISON ANALYSIS (aggregate segment data for {cluster_a['size']:,} + {cluster_b['size']:,} customers):
 
 Segment Sizes:
 - Cluster {cohort_a}: {cluster_a['size']:,} customers
@@ -949,10 +952,10 @@ SMS Usage Comparison:
 - Cluster {cohort_b}: {sms_b:.1f} messages/customer
 - Difference: {sms_diff:+.1f}%
 
-Provide 3 insights about:
-1. Key behavioral differences between these segments
-2. Which segment is more valuable and why
-3. Specific targeting or upsell opportunities for each segment
+Provide 3 strategic insights about these segments (NOT individual package recommendations):
+1. Key behavioral differences and what they indicate
+2. Which segment is more valuable and growth potential
+3. High-level targeting strategies or campaign ideas for each segment
 """
     show_ai_insights(context, "cohort comparison")
 
@@ -1208,7 +1211,7 @@ Provide 3 insights specifically about SMS USAGE patterns, why SMS might be low/h
                 total_customers = df_clusters['size'].sum()
                 
                 context = f"""
-CLUSTERING PATTERN ANALYSIS:
+CLUSTERING PATTERN ANALYSIS (aggregate data for {total_customers:,} customers across {len(df_clusters)} clusters):
 
 Cluster Overview:
 - Total clusters: {len(df_clusters)}
@@ -1224,10 +1227,10 @@ Usage Pattern Across Clusters:
 Cluster Distribution:
 {chr(10).join([f'- Cluster {row["cluster_id"]}: {row["size"]:,} customers ({row["size"]/total_customers*100:.1f}%)' for _, row in df_clusters.iterrows()])}
 
-Provide 3 insights about:
-1. Most valuable cluster and why
-2. Underserved or at-risk cluster
-3. Opportunities to move customers between clusters (upsell/retention)
+Provide 3 strategic insights (NOT package recommendations):
+1. Which cluster represents the highest-value customers and why
+2. Which cluster shows risk of churn or underutilization
+3. High-level strategies to improve customer value across clusters
 """
                 show_ai_insights(context, "clustering analysis")
         
